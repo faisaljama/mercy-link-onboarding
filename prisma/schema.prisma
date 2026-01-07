@@ -58,9 +58,18 @@ model Client {
   dob               DateTime
   admissionDate     DateTime
   houseId           String
-  caseManagerName   String?
-  caseManagerEmail  String?
-  caseManagerPhone  String?
+  photoUrl          String?   // Client profile photo
+
+  // Mental Health Case Manager
+  mhCaseManagerName   String?
+  mhCaseManagerEmail  String?
+  mhCaseManagerPhone  String?
+
+  // CADI/Waiver Case Manager
+  cadiCaseManagerName   String?
+  cadiCaseManagerEmail  String?
+  cadiCaseManagerPhone  String?
+
   legalRepName      String?
   legalRepPhone     String?
   waiverType        String?   // DD, CADI, BI, etc.
@@ -68,9 +77,56 @@ model Client {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  house           House            @relation(fields: [houseId], references: [id])
-  complianceItems ComplianceItem[]
-  documents       Document[]
+  // Face Sheet - Personal Info
+  middleName        String?
+  ssn               String?   // Last 4 digits only for security
+  gender            String?
+  ethnicity         String?
+  preferredLanguage String?
+  maritalStatus     String?
+
+  // Face Sheet - Insurance
+  pmiNumber         String?   // PMI/MA Insurance Number
+  insuranceName     String?
+  insurancePolicyNumber String?
+  insuranceGroupNumber  String?
+  insurancePhone    String?
+
+  // Face Sheet - Emergency Contacts
+  emergencyContact1Name   String?
+  emergencyContact1Phone  String?
+  emergencyContact1Relationship String?
+  emergencyContact2Name   String?
+  emergencyContact2Phone  String?
+  emergencyContact2Relationship String?
+
+  // Face Sheet - Medical Providers
+  pharmacyName      String?
+  pharmacyPhone     String?
+  pharmacyAddress   String?
+  primaryCareName   String?
+  primaryCarePhone  String?
+  primaryCareAddress String?
+  psychiatristName  String?
+  psychiatristPhone String?
+  psychiatristAddress String?
+  dentalName        String?
+  dentalPhone       String?
+  dentalAddress     String?
+  visionName        String?
+  visionPhone       String?
+  visionAddress     String?
+
+  // Face Sheet - Additional Info
+  allergies         String?
+  dietaryRestrictions String?
+  diagnoses         String?
+  medications       String?
+
+  house              House            @relation(fields: [houseId], references: [id])
+  complianceItems    ComplianceItem[]
+  documents          Document[]
+  admissionDischarges AdmissionDischarge[]
 }
 
 model Employee {
@@ -178,4 +234,39 @@ model Notification {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Admission/Discharge Register for tracking client movements
+model AdmissionDischarge {
+  id            String   @id @default(cuid())
+  clientId      String
+  type          String   // ADMISSION, DISCHARGE, TRANSFER_IN, TRANSFER_OUT
+  date          DateTime
+  fromLocation  String?  // For transfers - where they came from
+  toLocation    String?  // For transfers/discharges - where they went
+  reason        String?  // Reason for discharge/transfer
+  notes         String?
+  dischargeType String?  // PLANNED, UNPLANNED, EMERGENCY, DEATH, etc.
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+// Quality Assurance Checklist for periodic reviews
+model QAChecklist {
+  id              String    @id @default(cuid())
+  houseId         String?
+  clientId        String?
+  checklistType   String    // MONTHLY_HOUSE, QUARTERLY_CLIENT, ANNUAL_REVIEW, INCIDENT_FOLLOWUP
+  reviewDate      DateTime
+  reviewedBy      String    // User ID who performed the review
+  status          String    @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, NEEDS_ATTENTION
+  items           String    // JSON string of checklist items with yes/no/na and notes
+  overallNotes    String?
+  followUpRequired Boolean  @default(false)
+  followUpDate    DateTime?
+  followUpNotes   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }

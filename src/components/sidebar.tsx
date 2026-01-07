@@ -12,6 +12,8 @@ import {
   Settings,
   LogOut,
   FileText,
+  ClipboardList,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,6 +33,8 @@ const navigation = [
   { name: "Clients", href: "/dashboard/clients", icon: Users },
   { name: "Employees", href: "/dashboard/employees", icon: UserCog },
   { name: "Houses", href: "/dashboard/houses", icon: Home },
+  { name: "Register", href: "/dashboard/register", icon: ClipboardList },
+  { name: "QA Checklist", href: "/dashboard/qa-checklist", icon: ClipboardCheck },
   { name: "Documents", href: "/dashboard/documents", icon: FileText },
   { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
 ];
@@ -52,7 +56,19 @@ export function Sidebar({ user }: SidebarProps) {
       <div className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
+            <img
+              src="/images/mercy-link-logo.png"
+              alt="Mercy Link"
+              className="h-10 w-10 object-contain rounded-lg"
+              onError={(e) => {
+                // Fallback to text if logo not found
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const fallback = target.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+            <div className="hidden h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
               <span className="text-lg font-bold text-white">ML</span>
             </div>
             <div>

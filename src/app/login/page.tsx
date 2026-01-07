@@ -46,8 +46,22 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">ML</span>
+          <div className="mx-auto mb-4">
+            <img
+              src="/images/mercy-link-logo.png"
+              alt="Mercy Link"
+              className="w-20 h-20 object-contain mx-auto"
+              onError={(e) => {
+                // Fallback to text if logo not found
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const fallback = target.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+            <div className="hidden w-16 h-16 bg-blue-600 rounded-xl items-center justify-center mx-auto">
+              <span className="text-white font-bold text-2xl">ML</span>
+            </div>
           </div>
           <CardTitle className="text-2xl">Mercy Link</CardTitle>
           <CardDescription>245D Compliance Dashboard</CardDescription>
@@ -66,7 +80,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@mercylink.com"
+                placeholder="you@mercylinkmn.com"
                 required
               />
             </div>

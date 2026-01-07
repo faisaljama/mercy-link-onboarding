@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ import {
   Shield,
   Heart,
   Car,
+  Loader2,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 
@@ -97,6 +98,9 @@ function getStatusBadge(status: string, dueDate: Date) {
 export function TrainingChecklist({ items, employeeId }: TrainingChecklistProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+  const [uploadingItem, setUploadingItem] = useState<string | null>(null);
+  const [openDialogId, setOpenDialogId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleMarkComplete = async (itemId: string) => {
     setLoading(itemId);
@@ -112,6 +116,34 @@ export function TrainingChecklist({ items, employeeId }: TrainingChecklistProps)
       console.error("Failed to mark complete:", error);
     } finally {
       setLoading(null);
+    }
+  };
+
+  const handleUpload = async (itemId: string, file: File) => {
+    setUploadingItem(itemId);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("employeeId", employeeId);
+      formData.append("complianceItemId", itemId);
+
+      const res = await fetch("/api/documents/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        setOpenDialogId(null);
+        router.refresh();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to upload document");
+      }
+    } catch (error) {
+      console.error("Failed to upload:", error);
+      alert("Failed to upload document");
+    } finally {
+      setUploadingItem(null);
     }
   };
 
@@ -205,36 +237,53 @@ export function TrainingChecklist({ items, employeeId }: TrainingChecklistProps)
                         {loading === item.id ? "Saving..." : "Mark Complete"}
                       </Button>
                     )}
-                    <Dialog>
+                    <Dialog open={openDialogId === item.id} onOpenChange={(open) => setOpenDialogId(open ? item.id : null)}>
                       <DialogTrigger asChild>
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" title="Upload Certificate">
                           <Upload className="h-4 w-4" />
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Upload Document</DialogTitle>
+                          <DialogTitle>Upload Certificate</DialogTitle>
                           <DialogDescription>
                             Upload a certificate or document for "{item.itemName}"
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <div className="space-y-2">
-                            <Label htmlFor="file">Select File</Label>
-                            <Input id="file" type="file" />
+                            <Label htmlFor={`file-${item.id}`}>Select File</Label>
+                            <Input
+                              id={`file-${item.id}`}
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleUpload(item.id, file);
+                                }
+                              }}
+                              disabled={uploadingItem === item.id}
+                            />
+                            <p className="text-xs text-slate-500">
+                              Accepted formats: PDF, JPG, PNG, DOC, DOCX (max 10MB)
+                            </p>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="expiry">Expiration Date (if applicable)</Label>
-                            <Input id="expiry" type="date" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="notes">Notes (optional)</Label>
-                            <Input id="notes" placeholder="Add any notes about this document" />
-                          </div>
+                          {uploadingItem === item.id && (
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Uploading certificate...
+                            </div>
+                          )}
                         </div>
                         <DialogFooter>
-                          <Button variant="outline">Cancel</Button>
-                          <Button>Upload</Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setOpenDialogId(null)}
+                            disabled={uploadingItem === item.id}
+                          >
+                            Cancel
+                          </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>

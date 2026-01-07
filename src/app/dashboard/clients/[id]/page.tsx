@@ -93,9 +93,17 @@ export default async function ClientDetailPage({
       {/* Client Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-            <User className="h-8 w-8 text-blue-600" />
-          </div>
+          {client.photoUrl ? (
+            <img
+              src={client.photoUrl}
+              alt={`${client.firstName} ${client.lastName}`}
+              className="h-16 w-16 rounded-full object-cover border-2 border-blue-100"
+            />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+              <User className="h-8 w-8 text-blue-600" />
+            </div>
+          )}
           <div>
             <h1 className="text-3xl font-bold text-slate-900">
               {client.firstName} {client.lastName}
@@ -109,6 +117,12 @@ export default async function ClientDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
+          <Link href={`/dashboard/clients/${client.id}/face-sheet`}>
+            <Button variant="outline">
+              <FileText className="mr-2 h-4 w-4" />
+              Face Sheet
+            </Button>
+          </Link>
           <Link href={`/dashboard/clients/${client.id}/edit`}>
             <Button variant="outline">Edit Client</Button>
           </Link>
@@ -182,20 +196,43 @@ export default async function ClientDetailPage({
             </div>
             <Separator />
             <div>
-              <p className="text-sm font-medium text-slate-700 mb-2">Case Manager</p>
-              {client.caseManagerName ? (
+              <p className="text-sm font-medium text-slate-700 mb-2">Mental Health Case Manager</p>
+              {client.mhCaseManagerName ? (
                 <div className="space-y-1">
-                  <p className="font-medium">{client.caseManagerName}</p>
-                  {client.caseManagerEmail && (
+                  <p className="font-medium">{client.mhCaseManagerName}</p>
+                  {client.mhCaseManagerEmail && (
                     <p className="text-sm text-slate-500 flex items-center gap-1">
                       <Mail className="h-3 w-3" />
-                      {client.caseManagerEmail}
+                      {client.mhCaseManagerEmail}
                     </p>
                   )}
-                  {client.caseManagerPhone && (
+                  {client.mhCaseManagerPhone && (
                     <p className="text-sm text-slate-500 flex items-center gap-1">
                       <Phone className="h-3 w-3" />
-                      {client.caseManagerPhone}
+                      {client.mhCaseManagerPhone}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-slate-400">Not assigned</p>
+              )}
+            </div>
+            <Separator />
+            <div>
+              <p className="text-sm font-medium text-slate-700 mb-2">CADI Case Manager</p>
+              {client.cadiCaseManagerName ? (
+                <div className="space-y-1">
+                  <p className="font-medium">{client.cadiCaseManagerName}</p>
+                  {client.cadiCaseManagerEmail && (
+                    <p className="text-sm text-slate-500 flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      {client.cadiCaseManagerEmail}
+                    </p>
+                  )}
+                  {client.cadiCaseManagerPhone && (
+                    <p className="text-sm text-slate-500 flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {client.cadiCaseManagerPhone}
                     </p>
                   )}
                 </div>

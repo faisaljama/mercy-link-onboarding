@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, Camera, User } from "lucide-react";
 import Link from "next/link";
 
 interface House {
@@ -41,9 +41,13 @@ interface Client {
   houseId: string;
   waiverType: string | null;
   status: string;
-  caseManagerName: string | null;
-  caseManagerEmail: string | null;
-  caseManagerPhone: string | null;
+  photoUrl: string | null;
+  mhCaseManagerName: string | null;
+  mhCaseManagerEmail: string | null;
+  mhCaseManagerPhone: string | null;
+  cadiCaseManagerName: string | null;
+  cadiCaseManagerEmail: string | null;
+  cadiCaseManagerPhone: string | null;
   legalRepName: string | null;
   legalRepPhone: string | null;
 }
@@ -70,12 +74,17 @@ export default function EditClientPage({
     houseId: "",
     waiverType: "",
     status: "ACTIVE",
-    caseManagerName: "",
-    caseManagerEmail: "",
-    caseManagerPhone: "",
+    mhCaseManagerName: "",
+    mhCaseManagerEmail: "",
+    mhCaseManagerPhone: "",
+    cadiCaseManagerName: "",
+    cadiCaseManagerEmail: "",
+    cadiCaseManagerPhone: "",
     legalRepName: "",
     legalRepPhone: "",
   });
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     fetchClient();
@@ -88,6 +97,7 @@ export default function EditClientPage({
       if (res.ok) {
         const data = await res.json();
         setClient(data.client);
+        setPhotoUrl(data.client.photoUrl || null);
         setFormData({
           firstName: data.client.firstName,
           lastName: data.client.lastName,
@@ -96,9 +106,12 @@ export default function EditClientPage({
           houseId: data.client.houseId,
           waiverType: data.client.waiverType || "",
           status: data.client.status,
-          caseManagerName: data.client.caseManagerName || "",
-          caseManagerEmail: data.client.caseManagerEmail || "",
-          caseManagerPhone: data.client.caseManagerPhone || "",
+          mhCaseManagerName: data.client.mhCaseManagerName || "",
+          mhCaseManagerEmail: data.client.mhCaseManagerEmail || "",
+          mhCaseManagerPhone: data.client.mhCaseManagerPhone || "",
+          cadiCaseManagerName: data.client.cadiCaseManagerName || "",
+          cadiCaseManagerEmail: data.client.cadiCaseManagerEmail || "",
+          cadiCaseManagerPhone: data.client.cadiCaseManagerPhone || "",
           legalRepName: data.client.legalRepName || "",
           legalRepPhone: data.client.legalRepPhone || "",
         });
@@ -110,6 +123,37 @@ export default function EditClientPage({
       setError("Failed to load client");
     } finally {
       setLoadingClient(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("clientId", id);
+      formData.append("isPhoto", "true");
+
+      const res = await fetch("/api/documents/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPhotoUrl(data.document.filePath);
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to upload photo");
+      }
+    } catch (error) {
+      console.error("Failed to upload photo:", error);
+      setError("Failed to upload photo");
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -134,7 +178,7 @@ export default function EditClientPage({
       const res = await fetch(`/api/clients/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, photoUrl }),
       });
 
       if (!res.ok) {
@@ -246,13 +290,52 @@ export default function EditClientPage({
 
       <form onSubmit={handleSubmit}>
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Basic Information */}
+          {/* Photo & Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
               <CardDescription>Update the client's personal details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Photo Upload */}
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  {photoUrl ? (
+                    <img
+                      src={photoUrl}
+                      alt="Client photo"
+                      className="h-20 w-20 rounded-full object-cover border-2 border-blue-100"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100">
+                      <User className="h-10 w-10 text-blue-600" />
+                    </div>
+                  )}
+                  <label
+                    htmlFor="photo-upload"
+                    className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    {uploadingPhoto ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                  </label>
+                  <input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                    disabled={uploadingPhoto}
+                  />
+                </div>
+                <div>
+                  <p className="font-medium">Client Photo</p>
+                  <p className="text-sm text-slate-500">Click the camera icon to upload</p>
+                </div>
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name *</Label>
@@ -358,35 +441,65 @@ export default function EditClientPage({
           <Card>
             <CardHeader>
               <CardTitle>Contact Information</CardTitle>
-              <CardDescription>Case manager and legal representative details</CardDescription>
+              <CardDescription>Case managers and legal representative details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <h4 className="font-medium text-slate-700">Case Manager</h4>
+                <h4 className="font-medium text-slate-700">Mental Health Case Manager</h4>
                 <div className="space-y-2">
-                  <Label htmlFor="caseManagerName">Name</Label>
+                  <Label htmlFor="mhCaseManagerName">Name</Label>
                   <Input
-                    id="caseManagerName"
-                    value={formData.caseManagerName}
-                    onChange={(e) => setFormData({ ...formData, caseManagerName: e.target.value })}
+                    id="mhCaseManagerName"
+                    value={formData.mhCaseManagerName}
+                    onChange={(e) => setFormData({ ...formData, mhCaseManagerName: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="caseManagerEmail">Email</Label>
+                  <Label htmlFor="mhCaseManagerEmail">Email</Label>
                   <Input
-                    id="caseManagerEmail"
+                    id="mhCaseManagerEmail"
                     type="email"
-                    value={formData.caseManagerEmail}
-                    onChange={(e) => setFormData({ ...formData, caseManagerEmail: e.target.value })}
+                    value={formData.mhCaseManagerEmail}
+                    onChange={(e) => setFormData({ ...formData, mhCaseManagerEmail: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="caseManagerPhone">Phone</Label>
+                  <Label htmlFor="mhCaseManagerPhone">Phone</Label>
                   <Input
-                    id="caseManagerPhone"
+                    id="mhCaseManagerPhone"
                     type="tel"
-                    value={formData.caseManagerPhone}
-                    onChange={(e) => setFormData({ ...formData, caseManagerPhone: e.target.value })}
+                    value={formData.mhCaseManagerPhone}
+                    onChange={(e) => setFormData({ ...formData, mhCaseManagerPhone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-medium text-slate-700">CADI Case Manager</h4>
+                <div className="space-y-2">
+                  <Label htmlFor="cadiCaseManagerName">Name</Label>
+                  <Input
+                    id="cadiCaseManagerName"
+                    value={formData.cadiCaseManagerName}
+                    onChange={(e) => setFormData({ ...formData, cadiCaseManagerName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cadiCaseManagerEmail">Email</Label>
+                  <Input
+                    id="cadiCaseManagerEmail"
+                    type="email"
+                    value={formData.cadiCaseManagerEmail}
+                    onChange={(e) => setFormData({ ...formData, cadiCaseManagerEmail: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cadiCaseManagerPhone">Phone</Label>
+                  <Input
+                    id="cadiCaseManagerPhone"
+                    type="tel"
+                    value={formData.cadiCaseManagerPhone}
+                    onChange={(e) => setFormData({ ...formData, cadiCaseManagerPhone: e.target.value })}
                   />
                 </div>
               </div>
