@@ -23,6 +23,17 @@ model User {
   auditLogs      AuditLog[]
   documents      Document[]
   notifications  Notification[]
+
+  // Rent tracking relations
+  rentPaymentsEntered  RentPayment[] @relation("RentEnteredBy")
+  rentPaymentsSignedOff RentPayment[] @relation("RentSignedOffBy")
+
+  // Expense tracking relations
+  expensesPurchased    HouseExpense[] @relation("ExpensePurchasedBy")
+  expensesCreated      HouseExpense[] @relation("ExpenseCreatedBy")
+
+  // Monthly summaries uploaded
+  monthlySummariesUploaded ClientMonthlySummary[]
 }
 
 model UserHouse {
@@ -49,6 +60,8 @@ model House {
   assignedUsers UserHouse[]
   clients       Client[]
   employees     EmployeeHouse[]
+  expenses      HouseExpense[]
+  rentPayments  RentPayment[]
 }
 
 model Client {
@@ -76,6 +89,23 @@ model Client {
   status            String    @default("ACTIVE") // ACTIVE, DISCHARGED
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  // Rep Payee Information
+  hasRepPayee       Boolean   @default(false)
+  repPayeeName      String?
+  repPayeePhone     String?
+  repPayeeAddress   String?
+
+  // Guardian Information
+  hasGuardian       Boolean   @default(false)
+  guardianName      String?
+  guardianPhone     String?
+  guardianAddress   String?
+  guardianRelationship String?
+
+  // Check/Payment Delivery
+  checkDeliveryLocation String? // OFFICE, HOUSE
+  rentAmount        Decimal?  @db.Decimal(10, 2) // Monthly rent amount due
 
   // Face Sheet - Personal Info
   middleName        String?
@@ -127,6 +157,8 @@ model Client {
   complianceItems    ComplianceItem[]
   documents          Document[]
   admissionDischarges AdmissionDischarge[]
+  rentPayments       RentPayment[]
+  monthlySummaries   ClientMonthlySummary[]
 }
 
 model Employee {
@@ -269,4 +301,87 @@ model QAChecklist {
   followUpNotes   String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+// Rent Payment Tracking
+model RentPayment {
+  id              String    @id @default(cuid())
+  clientId        String
+  houseId         String
+  month           Int       // 1-12
+  year            Int
+  amountDue       Decimal   @db.Decimal(10, 2)
+  amountPaid      Decimal   @db.Decimal(10, 2)
+  paymentDate     DateTime?
+  paymentMethod   String?   // CHECK, CASH, ELECTRONIC, OTHER
+  checkNumber     String?
+  notes           String?
+
+  // Tracking who entered and signed off
+  enteredById     String
+  enteredAt       DateTime  @default(now())
+  signedOffById   String?
+  signedOffAt     DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  house           House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  enteredBy       User      @relation("RentEnteredBy", fields: [enteredById], references: [id])
+  signedOffBy     User?     @relation("RentSignedOffBy", fields: [signedOffById], references: [id])
+
+  @@unique([clientId, month, year])
+}
+
+// House Expense Tracking (bill.com card purchases)
+model HouseExpense {
+  id              String    @id @default(cuid())
+  houseId         String
+  date            DateTime
+  amount          Decimal   @db.Decimal(10, 2)
+  category        String    // GROCERIES, HOUSEHOLD, ACTIVITIES, MEDICAL, TRANSPORTATION, OTHER
+  vendor          String?
+  description     String?
+  receiptUrl      String?
+
+  // Who made the purchase
+  purchasedById   String
+  participants    String?   // JSON array of participant names
+
+  // Tracking
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Monthly confirmation
+  month           Int       // 1-12
+  year            Int
+  isConfirmed     Boolean   @default(false)
+  confirmedAt     DateTime?
+
+  house           House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  purchasedBy     User      @relation("ExpensePurchasedBy", fields: [purchasedById], references: [id])
+  createdBy       User      @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+}
+
+// Client Monthly Summaries (uploaded documents)
+model ClientMonthlySummary {
+  id              String    @id @default(cuid())
+  clientId        String
+  month           Int       // 1-12
+  year            Int
+  title           String?
+  documentUrl     String
+  fileName        String
+  fileSize        Int?
+  notes           String?
+
+  uploadedById    String
+  uploadedAt      DateTime  @default(now())
+
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  uploadedBy      User      @relation(fields: [uploadedById], references: [id])
+
+  @@unique([clientId, month, year, title])
 }

@@ -44,6 +44,20 @@ export async function PUT(
       ethnicity,
       preferredLanguage,
       maritalStatus,
+      // Guardian
+      hasGuardian,
+      guardianName,
+      guardianPhone,
+      guardianAddress,
+      guardianRelationship,
+      // Rep Payee
+      hasRepPayee,
+      repPayeeName,
+      repPayeePhone,
+      repPayeeAddress,
+      // Financial
+      rentAmount,
+      checkDeliveryLocation,
       // Insurance
       pmiNumber,
       insuranceName,
@@ -90,6 +104,21 @@ export async function PUT(
         ethnicity: ethnicity || null,
         preferredLanguage: preferredLanguage || null,
         maritalStatus: maritalStatus || null,
+        // Guardian
+        hasGuardian: hasGuardian || false,
+        guardianName: guardianName || null,
+        guardianPhone: guardianPhone || null,
+        guardianAddress: guardianAddress || null,
+        guardianRelationship: guardianRelationship || null,
+        // Rep Payee
+        hasRepPayee: hasRepPayee || false,
+        repPayeeName: repPayeeName || null,
+        repPayeePhone: repPayeePhone || null,
+        repPayeeAddress: repPayeeAddress || null,
+        // Financial
+        rentAmount: rentAmount ? parseFloat(rentAmount) : null,
+        checkDeliveryLocation: checkDeliveryLocation || null,
+        // Insurance
         pmiNumber: pmiNumber || null,
         insuranceName: insuranceName || null,
         insurancePolicyNumber: insurancePolicyNumber || null,

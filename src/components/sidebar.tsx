@@ -14,6 +14,8 @@ import {
   FileText,
   ClipboardList,
   ClipboardCheck,
+  DollarSign,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,6 +35,8 @@ const navigation = [
   { name: "Clients", href: "/dashboard/clients", icon: Users },
   { name: "Employees", href: "/dashboard/employees", icon: UserCog },
   { name: "Houses", href: "/dashboard/houses", icon: Home },
+  { name: "Rent", href: "/dashboard/rent", icon: DollarSign },
+  { name: "Expenses", href: "/dashboard/expenses", icon: Receipt },
   { name: "Register", href: "/dashboard/register", icon: ClipboardList },
   { name: "QA Checklist", href: "/dashboard/qa-checklist", icon: ClipboardCheck },
   { name: "Documents", href: "/dashboard/documents", icon: FileText },

@@ -17,10 +17,13 @@ import {
   Eye,
   Activity,
   AlertCircle,
+  DollarSign,
+  UserCheck,
+  Building2,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { PrintButton } from "./print-button";
+import { PrintTemplate, PrintButton } from "@/components/print-template";
 
 async function getClient(id: string, houseIds: string[]) {
   const client = await prisma.client.findFirst({
@@ -123,10 +126,14 @@ export default async function FaceSheetPage({
       </div>
 
       {/* Face Sheet Content */}
+      <PrintTemplate
+        title="Client Face Sheet"
+        subtitle={`${client.firstName} ${client.lastName}`}
+      >
       <div className="max-w-4xl mx-auto space-y-6 print:space-y-4">
-        {/* Header Section */}
-        <div className="text-center border-b pb-4 print:pb-2">
-          <h1 className="text-2xl font-bold text-slate-900 print:text-xl">MERCY LINK MN, LLC</h1>
+        {/* Header Section - hidden on print since PrintTemplate has it */}
+        <div className="text-center border-b pb-4 print:hidden">
+          <h1 className="text-2xl font-bold text-slate-900">MERCY LINK MN, LLC</h1>
           <p className="text-slate-500">Client Face Sheet</p>
         </div>
 
@@ -356,6 +363,105 @@ export default async function FaceSheetPage({
           </CardContent>
         </Card>
 
+        {/* Guardian & Rep Payee */}
+        <Card className="print:shadow-none print:border">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <UserCheck className="h-5 w-5 text-blue-600" />
+              Guardian & Representative Payee
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-medium text-slate-700">Guardian</p>
+                  <Badge variant={client.hasGuardian ? "default" : "secondary"}>
+                    {client.hasGuardian ? "Yes" : "No"}
+                  </Badge>
+                </div>
+                {client.hasGuardian && client.guardianName ? (
+                  <>
+                    <p className="text-sm font-medium text-slate-900">{client.guardianName}</p>
+                    {client.guardianRelationship && (
+                      <p className="text-sm text-slate-600 mt-1">{client.guardianRelationship}</p>
+                    )}
+                    {client.guardianPhone && (
+                      <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
+                        <Phone className="h-3 w-3" />
+                        {client.guardianPhone}
+                      </p>
+                    )}
+                    {client.guardianAddress && (
+                      <p className="text-sm text-slate-500 mt-1">{client.guardianAddress}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-400">
+                    {client.hasGuardian ? "Guardian info not on file" : "No guardian assigned"}
+                  </p>
+                )}
+              </div>
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-medium text-slate-700">Rep Payee</p>
+                  <Badge variant={client.hasRepPayee ? "default" : "secondary"}>
+                    {client.hasRepPayee ? "Yes" : "No"}
+                  </Badge>
+                </div>
+                {client.hasRepPayee && client.repPayeeName ? (
+                  <>
+                    <p className="text-sm font-medium text-slate-900">{client.repPayeeName}</p>
+                    {client.repPayeePhone && (
+                      <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
+                        <Phone className="h-3 w-3" />
+                        {client.repPayeePhone}
+                      </p>
+                    )}
+                    {client.repPayeeAddress && (
+                      <p className="text-sm text-slate-500 mt-1">{client.repPayeeAddress}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-400">
+                    {client.hasRepPayee ? "Rep payee info not on file" : "No rep payee assigned"}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Financial / Rent Information */}
+        <Card className="print:shadow-none print:border">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              Financial Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div>
+                <InfoRow label="Monthly Rent" value={client.rentAmount ? `$${Number(client.rentAmount).toFixed(2)}` : null} />
+              </div>
+              <div>
+                <InfoRow label="Check Delivery" value={client.checkDeliveryLocation || null} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-slate-400" />
+                <span className="text-sm text-slate-600">
+                  {client.checkDeliveryLocation === "OFFICE"
+                    ? "Checks delivered to main office"
+                    : client.checkDeliveryLocation === "HOUSE"
+                    ? `Checks delivered to ${client.house.name}`
+                    : "Check delivery location not set"}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Medical Providers */}
         <Card className="print:shadow-none print:border">
           <CardHeader className="pb-3">
@@ -451,12 +557,13 @@ export default async function FaceSheetPage({
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <div className="text-center text-xs text-slate-400 pt-4 border-t print:pt-2">
+        {/* Footer - only shown on screen, PrintTemplate handles print footer */}
+        <div className="text-center text-xs text-slate-400 pt-4 border-t print:hidden">
           <p>Generated on {format(new Date(), "MMMM d, yyyy 'at' h:mm a")}</p>
           <p>This document contains confidential information protected under HIPAA and Minnesota Statutes Chapter 245D</p>
         </div>
       </div>
+      </PrintTemplate>
     </div>
   );
 }

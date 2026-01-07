@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Loader2, User, Shield, AlertCircle, Stethoscope, Heart } from "lucide-react";
+import { ArrowLeft, Loader2, User, Shield, AlertCircle, Stethoscope, Heart, UserCheck, DollarSign } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 
 interface Client {
@@ -27,6 +28,20 @@ interface Client {
   ethnicity: string | null;
   preferredLanguage: string | null;
   maritalStatus: string | null;
+  // Guardian & Rep Payee
+  hasGuardian: boolean;
+  guardianName: string | null;
+  guardianPhone: string | null;
+  guardianAddress: string | null;
+  guardianRelationship: string | null;
+  hasRepPayee: boolean;
+  repPayeeName: string | null;
+  repPayeePhone: string | null;
+  repPayeeAddress: string | null;
+  // Financial
+  rentAmount: number | null;
+  checkDeliveryLocation: string | null;
+  // Insurance
   pmiNumber: string | null;
   insuranceName: string | null;
   insurancePolicyNumber: string | null;
@@ -79,6 +94,20 @@ export default function EditFaceSheetPage({
     ethnicity: "",
     preferredLanguage: "",
     maritalStatus: "",
+    // Guardian
+    hasGuardian: false,
+    guardianName: "",
+    guardianPhone: "",
+    guardianAddress: "",
+    guardianRelationship: "",
+    // Rep Payee
+    hasRepPayee: false,
+    repPayeeName: "",
+    repPayeePhone: "",
+    repPayeeAddress: "",
+    // Financial
+    rentAmount: "",
+    checkDeliveryLocation: "",
     // Insurance
     pmiNumber: "",
     insuranceName: "",
@@ -132,6 +161,21 @@ export default function EditFaceSheetPage({
           ethnicity: data.client.ethnicity || "",
           preferredLanguage: data.client.preferredLanguage || "",
           maritalStatus: data.client.maritalStatus || "",
+          // Guardian
+          hasGuardian: data.client.hasGuardian || false,
+          guardianName: data.client.guardianName || "",
+          guardianPhone: data.client.guardianPhone || "",
+          guardianAddress: data.client.guardianAddress || "",
+          guardianRelationship: data.client.guardianRelationship || "",
+          // Rep Payee
+          hasRepPayee: data.client.hasRepPayee || false,
+          repPayeeName: data.client.repPayeeName || "",
+          repPayeePhone: data.client.repPayeePhone || "",
+          repPayeeAddress: data.client.repPayeeAddress || "",
+          // Financial
+          rentAmount: data.client.rentAmount ? String(data.client.rentAmount) : "",
+          checkDeliveryLocation: data.client.checkDeliveryLocation || "",
+          // Insurance
           pmiNumber: data.client.pmiNumber || "",
           insuranceName: data.client.insuranceName || "",
           insurancePolicyNumber: data.client.insurancePolicyNumber || "",
@@ -331,6 +375,162 @@ export default function EditFaceSheetPage({
                     <SelectItem value="Married">Married</SelectItem>
                     <SelectItem value="Divorced">Divorced</SelectItem>
                     <SelectItem value="Widowed">Widowed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Guardian & Rep Payee */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-blue-600" />
+              Guardian & Representative Payee
+            </CardTitle>
+            <CardDescription>Guardian and financial representative information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Guardian */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Checkbox
+                  id="hasGuardian"
+                  checked={formData.hasGuardian}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, hasGuardian: checked === true }))
+                  }
+                />
+                <Label htmlFor="hasGuardian" className="font-medium">
+                  This client has a guardian
+                </Label>
+              </div>
+              {formData.hasGuardian && (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 pl-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianName">Guardian Name</Label>
+                    <Input
+                      id="guardianName"
+                      value={formData.guardianName}
+                      onChange={(e) => updateField("guardianName", e.target.value)}
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianRelationship">Relationship</Label>
+                    <Input
+                      id="guardianRelationship"
+                      value={formData.guardianRelationship}
+                      onChange={(e) => updateField("guardianRelationship", e.target.value)}
+                      placeholder="e.g., Parent, Sibling"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianPhone">Phone</Label>
+                    <Input
+                      id="guardianPhone"
+                      value={formData.guardianPhone}
+                      onChange={(e) => updateField("guardianPhone", e.target.value)}
+                      placeholder="(xxx) xxx-xxxx"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianAddress">Address</Label>
+                    <Input
+                      id="guardianAddress"
+                      value={formData.guardianAddress}
+                      onChange={(e) => updateField("guardianAddress", e.target.value)}
+                      placeholder="Full address"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Rep Payee */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Checkbox
+                  id="hasRepPayee"
+                  checked={formData.hasRepPayee}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, hasRepPayee: checked === true }))
+                  }
+                />
+                <Label htmlFor="hasRepPayee" className="font-medium">
+                  This client has a representative payee
+                </Label>
+              </div>
+              {formData.hasRepPayee && (
+                <div className="grid gap-4 sm:grid-cols-3 pl-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="repPayeeName">Rep Payee Name</Label>
+                    <Input
+                      id="repPayeeName"
+                      value={formData.repPayeeName}
+                      onChange={(e) => updateField("repPayeeName", e.target.value)}
+                      placeholder="Full name or organization"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="repPayeePhone">Phone</Label>
+                    <Input
+                      id="repPayeePhone"
+                      value={formData.repPayeePhone}
+                      onChange={(e) => updateField("repPayeePhone", e.target.value)}
+                      placeholder="(xxx) xxx-xxxx"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="repPayeeAddress">Address</Label>
+                    <Input
+                      id="repPayeeAddress"
+                      value={formData.repPayeeAddress}
+                      onChange={(e) => updateField("repPayeeAddress", e.target.value)}
+                      placeholder="Full address"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Financial Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              Financial Information
+            </CardTitle>
+            <CardDescription>Rent and check delivery details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="rentAmount">Monthly Rent Amount</Label>
+                <Input
+                  id="rentAmount"
+                  type="number"
+                  step="0.01"
+                  value={formData.rentAmount}
+                  onChange={(e) => updateField("rentAmount", e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkDeliveryLocation">Check Delivery Location</Label>
+                <Select
+                  value={formData.checkDeliveryLocation}
+                  onValueChange={(value) => updateField("checkDeliveryLocation", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select delivery location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OFFICE">Main Office</SelectItem>
+                    <SelectItem value="HOUSE">House/Residence</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
