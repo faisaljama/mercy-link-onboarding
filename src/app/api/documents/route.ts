@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, getUserHouseIds } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob";
 
 export async function GET(request: NextRequest) {
   try {
@@ -146,27 +145,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), "uploads");
-    await mkdir(uploadsDir, { recursive: true });
-
-    // Generate unique filename
+    // Generate unique filename for Vercel Blob
     const timestamp = Date.now();
-    const ext = path.extname(file.name);
-    const baseName = path.basename(file.name, ext).replace(/[^a-zA-Z0-9]/g, "_");
-    const uniqueFileName = `${timestamp}-${baseName}${ext}`;
-    const filePath = path.join(uploadsDir, uniqueFileName);
+    const randomString = Math.random().toString(36).substring(2, 8);
+    const extension = file.name.split(".").pop() || "bin";
+    const sanitizedName = file.name
+      .replace(/[^a-zA-Z0-9.-]/g, "_")
+      .substring(0, 50);
+    const filename = `documents/${timestamp}-${randomString}-${sanitizedName}`;
 
-    // Write file to disk
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    // Upload to Vercel Blob
+    const blob = await put(filename, file, {
+      access: "public",
+      addRandomSuffix: false,
+    });
 
     // Create document record
     const document = await prisma.document.create({
       data: {
         fileName: file.name,
-        filePath: `/uploads/${uniqueFileName}`,
+        filePath: blob.url,
         fileType: file.type || "application/octet-stream",
         fileSize: file.size,
         uploadedById: session.id,

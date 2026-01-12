@@ -14,9 +14,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Loader2, User, Shield, AlertCircle, Stethoscope, Heart, UserCheck, DollarSign } from "lucide-react";
+import { ArrowLeft, Loader2, User, Shield, AlertCircle, Stethoscope, Heart, UserCheck, DollarSign, Users, Monitor, Plus, Trash2, Briefcase } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
+import { formatPhoneInput } from "@/lib/format-phone";
+
+interface ClientProvider {
+  id: string;
+  providerType: string;
+  providerName: string;
+  organization: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+}
+
+const PROVIDER_TYPES = [
+  { value: "CHIROPRACTOR", label: "Chiropractor" },
+  { value: "PHYSICAL_THERAPIST", label: "Physical Therapist" },
+  { value: "OCCUPATIONAL_THERAPIST", label: "Occupational Therapist" },
+  { value: "SPEECH_THERAPIST", label: "Speech Therapist" },
+  { value: "PSYCHOLOGIST", label: "Psychologist/Counselor" },
+  { value: "PODIATRIST", label: "Podiatrist" },
+  { value: "NEUROLOGIST", label: "Neurologist" },
+  { value: "CARDIOLOGIST", label: "Cardiologist" },
+  { value: "DERMATOLOGIST", label: "Dermatologist" },
+  { value: "AUDIOLOGIST", label: "Audiologist" },
+  { value: "NUTRITIONIST", label: "Nutritionist/Dietitian" },
+  { value: "PAIN_MANAGEMENT", label: "Pain Management" },
+  { value: "WOUND_CARE", label: "Wound Care" },
+  { value: "UROLOGIST", label: "Urologist" },
+  { value: "GASTROENTEROLOGIST", label: "Gastroenterologist" },
+  { value: "PULMONOLOGIST", label: "Pulmonologist" },
+  { value: "ENDOCRINOLOGIST", label: "Endocrinologist" },
+  { value: "ORTHOPEDIST", label: "Orthopedist" },
+  { value: "OTHER", label: "Other Specialist" },
+];
 
 interface Client {
   id: string;
@@ -41,6 +82,15 @@ interface Client {
   // Financial
   rentAmount: number | null;
   checkDeliveryLocation: string | null;
+  // Internal - Staffing & Rate
+  dailyRate: number | null;
+  staffingRatio: string | null;
+  individualHours: number | null;
+  sharedStaffingHours: number | null;
+  // Internal - MyChart
+  myChartUsername: string | null;
+  myChartPassword: string | null;
+  myChartUrl: string | null;
   // Insurance
   pmiNumber: string | null;
   insuranceName: string | null;
@@ -54,24 +104,40 @@ interface Client {
   emergencyContact2Phone: string | null;
   emergencyContact2Relationship: string | null;
   pharmacyName: string | null;
+  pharmacyOrg: string | null;
   pharmacyPhone: string | null;
   pharmacyAddress: string | null;
   primaryCareName: string | null;
+  primaryCareOrg: string | null;
   primaryCarePhone: string | null;
   primaryCareAddress: string | null;
   psychiatristName: string | null;
+  psychiatristOrg: string | null;
   psychiatristPhone: string | null;
   psychiatristAddress: string | null;
   dentalName: string | null;
+  dentalOrg: string | null;
   dentalPhone: string | null;
   dentalAddress: string | null;
   visionName: string | null;
+  visionOrg: string | null;
   visionPhone: string | null;
   visionAddress: string | null;
   allergies: string | null;
   dietaryRestrictions: string | null;
   diagnoses: string | null;
   medications: string | null;
+  // Case Managers
+  mhCaseManagerName: string | null;
+  mhCaseManagerOrg: string | null;
+  mhCaseManagerEmail: string | null;
+  mhCaseManagerPhone: string | null;
+  cadiCaseManagerName: string | null;
+  cadiCaseManagerOrg: string | null;
+  cadiCaseManagerEmail: string | null;
+  cadiCaseManagerPhone: string | null;
+  legalRepName: string | null;
+  legalRepPhone: string | null;
 }
 
 export default function EditFaceSheetPage({
@@ -85,6 +151,16 @@ export default function EditFaceSheetPage({
   const [loadingClient, setLoadingClient] = useState(true);
   const [error, setError] = useState("");
   const [client, setClient] = useState<Client | null>(null);
+  const [additionalProviders, setAdditionalProviders] = useState<ClientProvider[]>([]);
+  const [showAddProviderDialog, setShowAddProviderDialog] = useState(false);
+  const [newProvider, setNewProvider] = useState({
+    providerType: "",
+    providerName: "",
+    organization: "",
+    phone: "",
+    address: "",
+    notes: "",
+  });
 
   const [formData, setFormData] = useState({
     // Personal Info
@@ -108,6 +184,15 @@ export default function EditFaceSheetPage({
     // Financial
     rentAmount: "",
     checkDeliveryLocation: "",
+    // Internal - Staffing & Rate
+    dailyRate: "",
+    staffingRatio: "",
+    individualHours: "",
+    sharedStaffingHours: "",
+    // Internal - MyChart
+    myChartUsername: "",
+    myChartPassword: "",
+    myChartUrl: "",
     // Insurance
     pmiNumber: "",
     insuranceName: "",
@@ -123,18 +208,23 @@ export default function EditFaceSheetPage({
     emergencyContact2Relationship: "",
     // Medical Providers
     pharmacyName: "",
+    pharmacyOrg: "",
     pharmacyPhone: "",
     pharmacyAddress: "",
     primaryCareName: "",
+    primaryCareOrg: "",
     primaryCarePhone: "",
     primaryCareAddress: "",
     psychiatristName: "",
+    psychiatristOrg: "",
     psychiatristPhone: "",
     psychiatristAddress: "",
     dentalName: "",
+    dentalOrg: "",
     dentalPhone: "",
     dentalAddress: "",
     visionName: "",
+    visionOrg: "",
     visionPhone: "",
     visionAddress: "",
     // Medical Info
@@ -142,10 +232,22 @@ export default function EditFaceSheetPage({
     dietaryRestrictions: "",
     diagnoses: "",
     medications: "",
+    // Case Managers
+    mhCaseManagerName: "",
+    mhCaseManagerOrg: "",
+    mhCaseManagerEmail: "",
+    mhCaseManagerPhone: "",
+    cadiCaseManagerName: "",
+    cadiCaseManagerOrg: "",
+    cadiCaseManagerEmail: "",
+    cadiCaseManagerPhone: "",
+    legalRepName: "",
+    legalRepPhone: "",
   });
 
   useEffect(() => {
     fetchClient();
+    fetchAdditionalProviders();
   }, [id]);
 
   const fetchClient = async () => {
@@ -175,6 +277,15 @@ export default function EditFaceSheetPage({
           // Financial
           rentAmount: data.client.rentAmount ? String(data.client.rentAmount) : "",
           checkDeliveryLocation: data.client.checkDeliveryLocation || "",
+          // Internal - Staffing & Rate
+          dailyRate: data.client.dailyRate ? String(data.client.dailyRate) : "",
+          staffingRatio: data.client.staffingRatio || "",
+          individualHours: data.client.individualHours ? String(data.client.individualHours) : "",
+          sharedStaffingHours: data.client.sharedStaffingHours ? String(data.client.sharedStaffingHours) : "",
+          // Internal - MyChart
+          myChartUsername: data.client.myChartUsername || "",
+          myChartPassword: data.client.myChartPassword || "",
+          myChartUrl: data.client.myChartUrl || "",
           // Insurance
           pmiNumber: data.client.pmiNumber || "",
           insuranceName: data.client.insuranceName || "",
@@ -188,24 +299,40 @@ export default function EditFaceSheetPage({
           emergencyContact2Phone: data.client.emergencyContact2Phone || "",
           emergencyContact2Relationship: data.client.emergencyContact2Relationship || "",
           pharmacyName: data.client.pharmacyName || "",
+          pharmacyOrg: data.client.pharmacyOrg || "",
           pharmacyPhone: data.client.pharmacyPhone || "",
           pharmacyAddress: data.client.pharmacyAddress || "",
           primaryCareName: data.client.primaryCareName || "",
+          primaryCareOrg: data.client.primaryCareOrg || "",
           primaryCarePhone: data.client.primaryCarePhone || "",
           primaryCareAddress: data.client.primaryCareAddress || "",
           psychiatristName: data.client.psychiatristName || "",
+          psychiatristOrg: data.client.psychiatristOrg || "",
           psychiatristPhone: data.client.psychiatristPhone || "",
           psychiatristAddress: data.client.psychiatristAddress || "",
           dentalName: data.client.dentalName || "",
+          dentalOrg: data.client.dentalOrg || "",
           dentalPhone: data.client.dentalPhone || "",
           dentalAddress: data.client.dentalAddress || "",
           visionName: data.client.visionName || "",
+          visionOrg: data.client.visionOrg || "",
           visionPhone: data.client.visionPhone || "",
           visionAddress: data.client.visionAddress || "",
           allergies: data.client.allergies || "",
           dietaryRestrictions: data.client.dietaryRestrictions || "",
           diagnoses: data.client.diagnoses || "",
           medications: data.client.medications || "",
+          // Case Managers
+          mhCaseManagerName: data.client.mhCaseManagerName || "",
+          mhCaseManagerOrg: data.client.mhCaseManagerOrg || "",
+          mhCaseManagerEmail: data.client.mhCaseManagerEmail || "",
+          mhCaseManagerPhone: data.client.mhCaseManagerPhone || "",
+          cadiCaseManagerName: data.client.cadiCaseManagerName || "",
+          cadiCaseManagerOrg: data.client.cadiCaseManagerOrg || "",
+          cadiCaseManagerEmail: data.client.cadiCaseManagerEmail || "",
+          cadiCaseManagerPhone: data.client.cadiCaseManagerPhone || "",
+          legalRepName: data.client.legalRepName || "",
+          legalRepPhone: data.client.legalRepPhone || "",
         });
       } else {
         setError("Client not found");
@@ -216,6 +343,64 @@ export default function EditFaceSheetPage({
     } finally {
       setLoadingClient(false);
     }
+  };
+
+  const fetchAdditionalProviders = async () => {
+    try {
+      const res = await fetch(`/api/clients/${id}/providers`);
+      if (res.ok) {
+        const data = await res.json();
+        setAdditionalProviders(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch providers:", error);
+    }
+  };
+
+  const handleAddProvider = async () => {
+    if (!newProvider.providerType || !newProvider.providerName) return;
+
+    try {
+      const res = await fetch(`/api/clients/${id}/providers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newProvider),
+      });
+
+      if (res.ok) {
+        const provider = await res.json();
+        setAdditionalProviders([...additionalProviders, provider]);
+        setNewProvider({
+          providerType: "",
+          providerName: "",
+          organization: "",
+          phone: "",
+          address: "",
+          notes: "",
+        });
+        setShowAddProviderDialog(false);
+      }
+    } catch (error) {
+      console.error("Failed to add provider:", error);
+    }
+  };
+
+  const handleDeleteProvider = async (providerId: string) => {
+    try {
+      const res = await fetch(`/api/clients/${id}/providers/${providerId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setAdditionalProviders(additionalProviders.filter((p) => p.id !== providerId));
+      }
+    } catch (error) {
+      console.error("Failed to delete provider:", error);
+    }
+  };
+
+  const getProviderTypeLabel = (type: string) => {
+    return PROVIDER_TYPES.find((pt) => pt.value === type)?.label || type;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -431,8 +616,8 @@ export default function EditFaceSheetPage({
                     <Input
                       id="guardianPhone"
                       value={formData.guardianPhone}
-                      onChange={(e) => updateField("guardianPhone", e.target.value)}
-                      placeholder="(xxx) xxx-xxxx"
+                      onChange={(e) => updateField("guardianPhone", formatPhoneInput(e.target.value))}
+                      placeholder="###-###-####"
                     />
                   </div>
                   <div className="space-y-2">
@@ -478,8 +663,8 @@ export default function EditFaceSheetPage({
                     <Input
                       id="repPayeePhone"
                       value={formData.repPayeePhone}
-                      onChange={(e) => updateField("repPayeePhone", e.target.value)}
-                      placeholder="(xxx) xxx-xxxx"
+                      onChange={(e) => updateField("repPayeePhone", formatPhoneInput(e.target.value))}
+                      placeholder="###-###-####"
                     />
                   </div>
                   <div className="space-y-2">
@@ -533,6 +718,114 @@ export default function EditFaceSheetPage({
                     <SelectItem value="HOUSE">House/Residence</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Internal Information - Staffing & Rates */}
+        <Card className="border-purple-200 bg-purple-50/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-purple-600" />
+              Internal Information - Staffing & Rates
+            </CardTitle>
+            <CardDescription>Internal use only - not shown on external face sheet</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <Label htmlFor="dailyRate">Daily Rate ($)</Label>
+                <Input
+                  id="dailyRate"
+                  type="number"
+                  step="0.01"
+                  value={formData.dailyRate}
+                  onChange={(e) => updateField("dailyRate", e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="staffingRatio">Staffing Ratio</Label>
+                <Select
+                  value={formData.staffingRatio}
+                  onValueChange={(value) => updateField("staffingRatio", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select ratio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3:1">3:1 (3 staff to 1 client)</SelectItem>
+                    <SelectItem value="2:1">2:1 (2 staff to 1 client)</SelectItem>
+                    <SelectItem value="1:1">1:1 (1 staff to 1 client)</SelectItem>
+                    <SelectItem value="1:4">1:4 (1 staff to 4 clients)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="individualHours">Individual Hours</Label>
+                <Input
+                  id="individualHours"
+                  type="number"
+                  step="0.01"
+                  value={formData.individualHours}
+                  onChange={(e) => updateField("individualHours", e.target.value)}
+                  placeholder="Hours per week"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sharedStaffingHours">Shared Staffing Hours</Label>
+                <Input
+                  id="sharedStaffingHours"
+                  type="number"
+                  step="0.01"
+                  value={formData.sharedStaffingHours}
+                  onChange={(e) => updateField("sharedStaffingHours", e.target.value)}
+                  placeholder="Hours per week"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Internal Information - MyChart Login */}
+        <Card className="border-purple-200 bg-purple-50/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-purple-600" />
+              Internal Information - MyChart Login
+            </CardTitle>
+            <CardDescription>Patient portal credentials for staff access to appointments</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="myChartUsername">MyChart Username</Label>
+                <Input
+                  id="myChartUsername"
+                  value={formData.myChartUsername}
+                  onChange={(e) => updateField("myChartUsername", e.target.value)}
+                  placeholder="Username"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="myChartPassword">MyChart Password</Label>
+                <Input
+                  id="myChartPassword"
+                  type="password"
+                  value={formData.myChartPassword}
+                  onChange={(e) => updateField("myChartPassword", e.target.value)}
+                  placeholder="Password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="myChartUrl">MyChart Portal URL</Label>
+                <Input
+                  id="myChartUrl"
+                  value={formData.myChartUrl}
+                  onChange={(e) => updateField("myChartUrl", e.target.value)}
+                  placeholder="https://mychart.example.com"
+                />
               </div>
             </div>
           </CardContent>
@@ -592,9 +885,134 @@ export default function EditFaceSheetPage({
                 <Input
                   id="insurancePhone"
                   value={formData.insurancePhone}
-                  onChange={(e) => updateField("insurancePhone", e.target.value)}
-                  placeholder="(xxx) xxx-xxxx"
+                  onChange={(e) => updateField("insurancePhone", formatPhoneInput(e.target.value))}
+                  placeholder="###-###-####"
                 />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Case Managers */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-blue-600" />
+              Case Managers
+            </CardTitle>
+            <CardDescription>Mental health and CADI case manager information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Mental Health Case Manager */}
+            <div>
+              <p className="font-medium text-slate-700 mb-3">Mental Health Case Manager</p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mhCaseManagerName">Name</Label>
+                  <Input
+                    id="mhCaseManagerName"
+                    value={formData.mhCaseManagerName}
+                    onChange={(e) => updateField("mhCaseManagerName", e.target.value)}
+                    placeholder="Case Manager Name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mhCaseManagerOrg">Organization</Label>
+                  <Input
+                    id="mhCaseManagerOrg"
+                    value={formData.mhCaseManagerOrg}
+                    onChange={(e) => updateField("mhCaseManagerOrg", e.target.value)}
+                    placeholder="Agency or Organization"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mhCaseManagerEmail">Email</Label>
+                  <Input
+                    id="mhCaseManagerEmail"
+                    type="email"
+                    value={formData.mhCaseManagerEmail}
+                    onChange={(e) => updateField("mhCaseManagerEmail", e.target.value)}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mhCaseManagerPhone">Phone</Label>
+                  <Input
+                    id="mhCaseManagerPhone"
+                    value={formData.mhCaseManagerPhone}
+                    onChange={(e) => updateField("mhCaseManagerPhone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* CADI Case Manager */}
+            <div>
+              <p className="font-medium text-slate-700 mb-3">CADI Case Manager</p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cadiCaseManagerName">Name</Label>
+                  <Input
+                    id="cadiCaseManagerName"
+                    value={formData.cadiCaseManagerName}
+                    onChange={(e) => updateField("cadiCaseManagerName", e.target.value)}
+                    placeholder="Case Manager Name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cadiCaseManagerOrg">Organization</Label>
+                  <Input
+                    id="cadiCaseManagerOrg"
+                    value={formData.cadiCaseManagerOrg}
+                    onChange={(e) => updateField("cadiCaseManagerOrg", e.target.value)}
+                    placeholder="Agency or Organization"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cadiCaseManagerEmail">Email</Label>
+                  <Input
+                    id="cadiCaseManagerEmail"
+                    type="email"
+                    value={formData.cadiCaseManagerEmail}
+                    onChange={(e) => updateField("cadiCaseManagerEmail", e.target.value)}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cadiCaseManagerPhone">Phone</Label>
+                  <Input
+                    id="cadiCaseManagerPhone"
+                    value={formData.cadiCaseManagerPhone}
+                    onChange={(e) => updateField("cadiCaseManagerPhone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Legal Representative */}
+            <div>
+              <p className="font-medium text-slate-700 mb-3">Legal Representative</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="legalRepName">Name</Label>
+                  <Input
+                    id="legalRepName"
+                    value={formData.legalRepName}
+                    onChange={(e) => updateField("legalRepName", e.target.value)}
+                    placeholder="Legal Representative Name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="legalRepPhone">Phone</Label>
+                  <Input
+                    id="legalRepPhone"
+                    value={formData.legalRepPhone}
+                    onChange={(e) => updateField("legalRepPhone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>
@@ -627,8 +1045,8 @@ export default function EditFaceSheetPage({
                   <Input
                     id="emergencyContact1Phone"
                     value={formData.emergencyContact1Phone}
-                    onChange={(e) => updateField("emergencyContact1Phone", e.target.value)}
-                    placeholder="(xxx) xxx-xxxx"
+                    onChange={(e) => updateField("emergencyContact1Phone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
                   />
                 </div>
                 <div className="space-y-2">
@@ -659,8 +1077,8 @@ export default function EditFaceSheetPage({
                   <Input
                     id="emergencyContact2Phone"
                     value={formData.emergencyContact2Phone}
-                    onChange={(e) => updateField("emergencyContact2Phone", e.target.value)}
-                    placeholder="(xxx) xxx-xxxx"
+                    onChange={(e) => updateField("emergencyContact2Phone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
                   />
                 </div>
                 <div className="space-y-2">
@@ -690,14 +1108,23 @@ export default function EditFaceSheetPage({
             {/* Pharmacy */}
             <div>
               <p className="font-medium text-slate-700 mb-3">Pharmacy</p>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pharmacyName">Name</Label>
+                  <Label htmlFor="pharmacyName">Pharmacy Name</Label>
                   <Input
                     id="pharmacyName"
                     value={formData.pharmacyName}
                     onChange={(e) => updateField("pharmacyName", e.target.value)}
-                    placeholder="Pharmacy name"
+                    placeholder="e.g., CVS, Walgreens"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pharmacyOrg">Location/Branch</Label>
+                  <Input
+                    id="pharmacyOrg"
+                    value={formData.pharmacyOrg}
+                    onChange={(e) => updateField("pharmacyOrg", e.target.value)}
+                    placeholder="e.g., Downtown location"
                   />
                 </div>
                 <div className="space-y-2">
@@ -705,8 +1132,8 @@ export default function EditFaceSheetPage({
                   <Input
                     id="pharmacyPhone"
                     value={formData.pharmacyPhone}
-                    onChange={(e) => updateField("pharmacyPhone", e.target.value)}
-                    placeholder="(xxx) xxx-xxxx"
+                    onChange={(e) => updateField("pharmacyPhone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
                   />
                 </div>
                 <div className="space-y-2">
@@ -724,14 +1151,23 @@ export default function EditFaceSheetPage({
             {/* Primary Care */}
             <div>
               <p className="font-medium text-slate-700 mb-3">Primary Care Physician</p>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <Label htmlFor="primaryCareName">Name</Label>
+                  <Label htmlFor="primaryCareName">Doctor Name</Label>
                   <Input
                     id="primaryCareName"
                     value={formData.primaryCareName}
                     onChange={(e) => updateField("primaryCareName", e.target.value)}
-                    placeholder="Doctor name"
+                    placeholder="Dr. Jane Smith"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="primaryCareOrg">Clinic/Organization</Label>
+                  <Input
+                    id="primaryCareOrg"
+                    value={formData.primaryCareOrg}
+                    onChange={(e) => updateField("primaryCareOrg", e.target.value)}
+                    placeholder="e.g., Mayo Clinic"
                   />
                 </div>
                 <div className="space-y-2">
@@ -739,8 +1175,8 @@ export default function EditFaceSheetPage({
                   <Input
                     id="primaryCarePhone"
                     value={formData.primaryCarePhone}
-                    onChange={(e) => updateField("primaryCarePhone", e.target.value)}
-                    placeholder="(xxx) xxx-xxxx"
+                    onChange={(e) => updateField("primaryCarePhone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
                   />
                 </div>
                 <div className="space-y-2">
@@ -758,14 +1194,23 @@ export default function EditFaceSheetPage({
             {/* Psychiatrist */}
             <div>
               <p className="font-medium text-slate-700 mb-3">Psychiatrist</p>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <Label htmlFor="psychiatristName">Name</Label>
+                  <Label htmlFor="psychiatristName">Doctor Name</Label>
                   <Input
                     id="psychiatristName"
                     value={formData.psychiatristName}
                     onChange={(e) => updateField("psychiatristName", e.target.value)}
-                    placeholder="Doctor name"
+                    placeholder="Dr. Name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="psychiatristOrg">Clinic/Organization</Label>
+                  <Input
+                    id="psychiatristOrg"
+                    value={formData.psychiatristOrg}
+                    onChange={(e) => updateField("psychiatristOrg", e.target.value)}
+                    placeholder="e.g., Mental Health Center"
                   />
                 </div>
                 <div className="space-y-2">
@@ -773,8 +1218,8 @@ export default function EditFaceSheetPage({
                   <Input
                     id="psychiatristPhone"
                     value={formData.psychiatristPhone}
-                    onChange={(e) => updateField("psychiatristPhone", e.target.value)}
-                    placeholder="(xxx) xxx-xxxx"
+                    onChange={(e) => updateField("psychiatristPhone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
                   />
                 </div>
                 <div className="space-y-2">
@@ -792,14 +1237,23 @@ export default function EditFaceSheetPage({
             {/* Dental */}
             <div>
               <p className="font-medium text-slate-700 mb-3">Dental</p>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dentalName">Name</Label>
+                  <Label htmlFor="dentalName">Dentist Name</Label>
                   <Input
                     id="dentalName"
                     value={formData.dentalName}
                     onChange={(e) => updateField("dentalName", e.target.value)}
-                    placeholder="Dentist name"
+                    placeholder="Dr. Name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dentalOrg">Clinic/Organization</Label>
+                  <Input
+                    id="dentalOrg"
+                    value={formData.dentalOrg}
+                    onChange={(e) => updateField("dentalOrg", e.target.value)}
+                    placeholder="e.g., Family Dental Care"
                   />
                 </div>
                 <div className="space-y-2">
@@ -807,8 +1261,8 @@ export default function EditFaceSheetPage({
                   <Input
                     id="dentalPhone"
                     value={formData.dentalPhone}
-                    onChange={(e) => updateField("dentalPhone", e.target.value)}
-                    placeholder="(xxx) xxx-xxxx"
+                    onChange={(e) => updateField("dentalPhone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
                   />
                 </div>
                 <div className="space-y-2">
@@ -826,14 +1280,23 @@ export default function EditFaceSheetPage({
             {/* Vision */}
             <div>
               <p className="font-medium text-slate-700 mb-3">Vision/Eye Care</p>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <Label htmlFor="visionName">Name</Label>
+                  <Label htmlFor="visionName">Doctor Name</Label>
                   <Input
                     id="visionName"
                     value={formData.visionName}
                     onChange={(e) => updateField("visionName", e.target.value)}
-                    placeholder="Eye doctor name"
+                    placeholder="Dr. Name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="visionOrg">Clinic/Organization</Label>
+                  <Input
+                    id="visionOrg"
+                    value={formData.visionOrg}
+                    onChange={(e) => updateField("visionOrg", e.target.value)}
+                    placeholder="e.g., Vision Center"
                   />
                 </div>
                 <div className="space-y-2">
@@ -841,8 +1304,8 @@ export default function EditFaceSheetPage({
                   <Input
                     id="visionPhone"
                     value={formData.visionPhone}
-                    onChange={(e) => updateField("visionPhone", e.target.value)}
-                    placeholder="(xxx) xxx-xxxx"
+                    onChange={(e) => updateField("visionPhone", formatPhoneInput(e.target.value))}
+                    placeholder="###-###-####"
                   />
                 </div>
                 <div className="space-y-2">
@@ -855,6 +1318,169 @@ export default function EditFaceSheetPage({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Additional Providers */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-medium text-slate-700">Additional Specialists</p>
+                <Dialog open={showAddProviderDialog} onOpenChange={setShowAddProviderDialog}>
+                  <DialogTrigger asChild>
+                    <Button type="button" variant="outline" size="sm">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Provider
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Provider</DialogTitle>
+                      <DialogDescription>
+                        Add a new healthcare provider for this client.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Provider Type</Label>
+                        <Select
+                          value={newProvider.providerType}
+                          onValueChange={(value) =>
+                            setNewProvider({ ...newProvider, providerType: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select provider type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PROVIDER_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Provider Name</Label>
+                        <Input
+                          value={newProvider.providerName}
+                          onChange={(e) =>
+                            setNewProvider({ ...newProvider, providerName: e.target.value })
+                          }
+                          placeholder="Dr. Name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Organization/Clinic</Label>
+                        <Input
+                          value={newProvider.organization}
+                          onChange={(e) =>
+                            setNewProvider({ ...newProvider, organization: e.target.value })
+                          }
+                          placeholder="Clinic name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Phone</Label>
+                        <Input
+                          value={newProvider.phone}
+                          onChange={(e) =>
+                            setNewProvider({ ...newProvider, phone: e.target.value })
+                          }
+                          placeholder="###-###-####"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Address</Label>
+                        <Input
+                          value={newProvider.address}
+                          onChange={(e) =>
+                            setNewProvider({ ...newProvider, address: e.target.value })
+                          }
+                          placeholder="Full address"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Notes</Label>
+                        <Textarea
+                          value={newProvider.notes}
+                          onChange={(e) =>
+                            setNewProvider({ ...newProvider, notes: e.target.value })
+                          }
+                          placeholder="Any additional notes..."
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowAddProviderDialog(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleAddProvider}
+                        disabled={!newProvider.providerType || !newProvider.providerName}
+                      >
+                        Add Provider
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {additionalProviders.length === 0 ? (
+                <p className="text-sm text-slate-500 italic">
+                  No additional providers added yet. Click "Add Provider" to add specialists.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {additionalProviders.map((provider) => (
+                    <div
+                      key={provider.id}
+                      className="border rounded-lg p-4 bg-slate-50"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                              {getProviderTypeLabel(provider.providerType)}
+                            </span>
+                          </div>
+                          <p className="font-medium text-slate-900">
+                            {provider.providerName}
+                            {provider.organization && (
+                              <span className="text-slate-500 font-normal">
+                                {" "}- {provider.organization}
+                              </span>
+                            )}
+                          </p>
+                          {provider.phone && (
+                            <p className="text-sm text-slate-600">{provider.phone}</p>
+                          )}
+                          {provider.address && (
+                            <p className="text-sm text-slate-500">{provider.address}</p>
+                          )}
+                          {provider.notes && (
+                            <p className="text-sm text-slate-500 mt-1 italic">{provider.notes}</p>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteProvider(provider.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

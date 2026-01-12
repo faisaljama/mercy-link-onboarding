@@ -15,7 +15,7 @@ model User {
   email         String    @unique
   password      String
   name          String
-  role          String    @default("LEAD_STAFF") // ADMIN, DESIGNATED_COORDINATOR, LEAD_STAFF
+  role          String    @default("LEAD_STAFF") // ADMIN, DESIGNATED_MANAGER, DESIGNATED_COORDINATOR, OPERATIONS, HR, FINANCE, LEAD_STAFF
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -34,6 +34,57 @@ model User {
 
   // Monthly summaries uploaded
   monthlySummariesUploaded ClientMonthlySummary[]
+
+  // Support plans uploaded
+  supportPlansUploaded ClientSupportPlan[]
+
+  // Calendar events created
+  calendarEventsCreated HouseCalendarEvent[]
+
+  // Daily operations reports
+  dailyReportsCreated   DailyOperationsReport[] @relation("DailyReportCreatedBy")
+  dailyReportsSubmitted DailyOperationsReport[] @relation("DailyReportSubmittedBy")
+  dailyReportsReviewed  DailyOperationsReport[] @relation("DailyReportReviewedBy")
+
+  // DC Daily Checklists
+  dcChecklistsCreated   DCDailyChecklist[] @relation("DCChecklistCreatedBy")
+
+  // Weekly DC Reports
+  weeklyReportsCreated   WeeklyDCReport[] @relation("WeeklyReportCreatedBy")
+  weeklyReportsSubmitted WeeklyDCReport[] @relation("WeeklyReportSubmittedBy")
+  weeklyReportsReviewed  WeeklyDCReport[] @relation("WeeklyReportReviewedBy")
+
+  // Resource Hub
+  hubResourcesUploaded   HubResource[]    @relation("HubResourceUploadedBy")
+  hubTutorialsCreated    HubTutorial[]    @relation("HubTutorialCreatedBy")
+
+  // Meeting Compliance (245D Documents)
+  meetingComplianceCreated  ClientMeetingCompliance[] @relation("MeetingComplianceCreatedBy")
+
+  // Staff Tasks
+  tasksCreated    Task[] @relation("TaskCreatedBy")
+  tasksCompleted  Task[] @relation("TaskCompletedBy")
+  tasksApproved   Task[] @relation("TaskApprovedBy")
+  tasksAssigned   TaskAssignment[]
+
+  // Genoa Deliveries received
+  genoaDeliveriesReceived GenoaDelivery[] @relation("GenoaReceivedBy")
+
+  // Fire Drills completed
+  fireDrillsCompleted FireDrill[] @relation("FireDrillCompletedBy")
+
+  // Service Agreements created
+  serviceAgreementsCreated ServiceAgreement[] @relation("ServiceAgreementCreatedBy")
+
+  // Billing Reports submitted
+  billingReportsCreated BillingReport[] @relation("BillingReportCreatedBy")
+
+  // Attendance Reports
+  attendanceReportsCreated AttendanceReport[] @relation("AttendanceReportCreatedBy")
+
+  // Accounts Receivable
+  arCreated    AccountsReceivable[] @relation("ARCreatedBy")
+  arResolved   AccountsReceivable[] @relation("ARResolvedBy")
 }
 
 model UserHouse {
@@ -54,6 +105,7 @@ model House {
   county        String
   licenseNumber String?
   capacity      Int      @default(4)
+  houseType     String   @default("CRS") // CRS (residential), OUT_OF_HOME (ICS/IHS clients)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -62,6 +114,61 @@ model House {
   employees     EmployeeHouse[]
   expenses      HouseExpense[]
   rentPayments  RentPayment[]
+  calendarEvents HouseCalendarEvent[]
+  dailyReports  DailyOperationsReport[]
+  dcChecklists  DCDailyChecklist[]
+  weeklyReports WeeklyDCReport[]
+  utilities     HouseUtility[]
+  tasks         Task[]
+  genoaDeliveries GenoaDelivery[]
+  fireDrills      FireDrill[]
+  serviceAgreements ServiceAgreement[]
+  attendanceReports AttendanceReport[]
+  accountsReceivable AccountsReceivable[]
+}
+
+// House Utilities and Services
+model HouseUtility {
+  id            String   @id @default(cuid())
+  houseId       String
+
+  // Utility type: ELECTRIC, GAS, WATER, INTERNET, TRASH, MAINTENANCE, SECURITY_CAMERA, PEST_CONTROL, SNOW_REMOVAL, OTHER
+  utilityType   String
+  providerName  String              // e.g., "Xcel Energy", "CenterPoint", "Waste Management"
+
+  // Contact info
+  websiteUrl    String?
+  phoneNumber   String?
+
+  // Account info (sensitive - Admin only)
+  accountNumber String?
+  loginUsername String?
+  loginPassword String?
+
+  // Security questions (sensitive - Admin only, up to 3)
+  securityQuestion1 String?
+  securityAnswer1   String?
+  securityQuestion2 String?
+  securityAnswer2   String?
+  securityQuestion3 String?
+  securityAnswer3   String?
+
+  // Payment info
+  isAutopay     Boolean  @default(false)
+  paymentCard   String?             // e.g., "US Bank 7875"
+
+  // For trash service
+  serviceDay    String?             // e.g., "Tuesday", "Every other Monday"
+
+  // General notes
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  house         House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([houseId])
 }
 
 model Client {
@@ -73,13 +180,20 @@ model Client {
   houseId           String
   photoUrl          String?   // Client profile photo
 
+  // Service Types (can have multiple)
+  serviceTypes      String?   // JSON array: CRS, ICS, IHS_WITH_TRAINING, IHS_WITHOUT_TRAINING, NIGHT_SUPERVISION, HOMEMAKING, EA_24_HOUR
+  serviceLevel      String?   // BASIC (245D Basic) or INTENSIVE (IHS with Training, Night Supervision)
+  isOutOfHome       Boolean   @default(false) // For out-of-home services clients (ICS, IHS)
+
   // Mental Health Case Manager
   mhCaseManagerName   String?
+  mhCaseManagerOrg    String?   // Organization/Agency name
   mhCaseManagerEmail  String?
   mhCaseManagerPhone  String?
 
   // CADI/Waiver Case Manager
   cadiCaseManagerName   String?
+  cadiCaseManagerOrg    String?   // Organization/Agency name
   cadiCaseManagerEmail  String?
   cadiCaseManagerPhone  String?
 
@@ -107,6 +221,17 @@ model Client {
   checkDeliveryLocation String? // OFFICE, HOUSE
   rentAmount        Decimal?  @db.Decimal(10, 2) // Monthly rent amount due
 
+  // Internal Face Sheet - Staffing & Rate Info
+  dailyRate           Decimal?  @db.Decimal(10, 2) // Daily rate
+  staffingRatio       String?   // "3:1", "2:1", "1:1", "1:4"
+  individualHours     Decimal?  @db.Decimal(5, 2)  // Individual staffing hours
+  sharedStaffingHours Decimal?  @db.Decimal(5, 2)  // Shared staffing hours
+
+  // MyChart Login Info (Internal)
+  myChartUsername     String?
+  myChartPassword     String?
+  myChartUrl          String?
+
   // Face Sheet - Personal Info
   middleName        String?
   ssn               String?   // Last 4 digits only for security
@@ -132,18 +257,23 @@ model Client {
 
   // Face Sheet - Medical Providers
   pharmacyName      String?
+  pharmacyOrg       String?   // Organization/Clinic name
   pharmacyPhone     String?
   pharmacyAddress   String?
   primaryCareName   String?
+  primaryCareOrg    String?   // Organization/Clinic name
   primaryCarePhone  String?
   primaryCareAddress String?
   psychiatristName  String?
+  psychiatristOrg   String?   // Organization/Clinic name
   psychiatristPhone String?
   psychiatristAddress String?
   dentalName        String?
+  dentalOrg         String?   // Organization/Clinic name
   dentalPhone       String?
   dentalAddress     String?
   visionName        String?
+  visionOrg         String?   // Organization/Clinic name
   visionPhone       String?
   visionAddress     String?
 
@@ -159,6 +289,30 @@ model Client {
   admissionDischarges AdmissionDischarge[]
   rentPayments       RentPayment[]
   monthlySummaries   ClientMonthlySummary[]
+  supportPlans       ClientSupportPlan[]
+  calendarEvents     HouseCalendarEvent[]
+  additionalProviders ClientProvider[]
+  meetingCompliance   ClientMeetingCompliance[]
+  genoaDeliveries    GenoaDelivery[]
+  serviceAgreements  ServiceAgreement[]
+}
+
+// Additional Healthcare Providers for clients
+model ClientProvider {
+  id            String   @id @default(cuid())
+  clientId      String
+  providerType  String   // CHIROPRACTOR, PHYSICAL_THERAPIST, OCCUPATIONAL_THERAPIST, etc.
+  providerName  String
+  organization  String?  // Clinic/Organization name
+  phone         String?
+  address       String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
 }
 
 model Employee {
@@ -198,11 +352,17 @@ model ComplianceItem {
   itemName      String    // Human-readable name
   dueDate       DateTime
   completedDate DateTime?
-  status        String    @default("PENDING") // PENDING, COMPLETED, OVERDUE
+  status        String    @default("PENDING") // PENDING, COMPLETED, OVERDUE, NOT_COMPLETED
   notes         String?
   statuteRef    String?   // Reference to 245D statute
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // Plan of Corrections (for NOT_COMPLETED items)
+  correctiveAction    String?   // What will be done to correct
+  correctiveNotes     String?   // Additional notes about the correction
+  correctionDueDate   DateTime? // When correction is due
+  correctionCompleted Boolean   @default(false) // Has correction been completed
 
   clientId   String?
   employeeId String?
@@ -231,15 +391,17 @@ model Document {
   fileSize         Int
   uploadedAt       DateTime @default(now())
 
-  uploadedById     String
-  complianceItemId String?
-  clientId         String?
-  employeeId       String?
+  uploadedById        String
+  complianceItemId    String?
+  clientId            String?
+  employeeId          String?
+  meetingComplianceId String?
 
-  uploadedBy     User            @relation(fields: [uploadedById], references: [id])
-  complianceItem ComplianceItem? @relation(fields: [complianceItemId], references: [id], onDelete: SetNull)
-  client         Client?         @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  employee       Employee?       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  uploadedBy        User                     @relation(fields: [uploadedById], references: [id])
+  complianceItem    ComplianceItem?          @relation(fields: [complianceItemId], references: [id], onDelete: SetNull)
+  client            Client?                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  employee          Employee?                @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  meetingCompliance ClientMeetingCompliance? @relation(fields: [meetingComplianceId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {
@@ -384,4 +546,794 @@ model ClientMonthlySummary {
   uploadedBy      User      @relation(fields: [uploadedById], references: [id])
 
   @@unique([clientId, month, year, title])
+}
+
+// Support Plan Types
+enum SupportPlanType {
+  CSSP                    // Coordinated Service & Support Plan
+  BEHAVIOR_SUPPORT_PLAN
+  CSSP_ADDENDUM
+  COMMITMENT_STATUS
+  HOSPITALIZATION
+  AFTER_VISIT_SUMMARY
+}
+
+// Client Support Plans with date ranges
+model ClientSupportPlan {
+  id                  String          @id @default(cuid())
+  clientId            String
+  planType            SupportPlanType
+  title               String?
+
+  // Date range for plan validity
+  effectiveStartDate  DateTime
+  effectiveEndDate    DateTime?
+
+  // Document info
+  documentUrl         String
+  fileName            String
+  fileSize            Int?
+  notes               String?
+
+  uploadedById        String
+  uploadedAt          DateTime        @default(now())
+
+  client              Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  uploadedBy          User            @relation(fields: [uploadedById], references: [id])
+
+  @@index([clientId, planType])
+}
+
+// Meeting Types for 245D Compliance Document Tracking
+enum MeetingType {
+  ADMISSION
+  INITIAL_45_60_DAY
+  SEMI_ANNUAL
+  ANNUAL
+}
+
+// Client Meeting Compliance - Tracks required documents for each meeting type
+model ClientMeetingCompliance {
+  id            String      @id @default(cuid())
+  clientId      String
+  meetingType   MeetingType
+  meetingDate   DateTime    @db.Date
+  year          Int         // Year 1, 2, 3, etc. from admission
+
+  // JSON object storing checklist items: { "item_key": { completed: boolean, completedDate: string?, notes: string? } }
+  checklistItems  String    @default("{}")
+
+  // General meeting notes
+  notes           String?
+
+  // If case manager absent, track when docs were sent
+  caseManagerAbsent     Boolean   @default(false)
+  docsSentDate          DateTime?
+  docsSentNotes         String?
+
+  // Timestamps
+  createdById   String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  client        Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy     User        @relation("MeetingComplianceCreatedBy", fields: [createdById], references: [id])
+  documents     Document[]
+
+  @@unique([clientId, meetingType, year])
+  @@index([clientId])
+}
+
+// Calendar Event Types
+enum CalendarEventType {
+  STAFF_MEETING      // Internal staff meetings
+  CARE_MEETING       // Care team meetings, CSSP reviews
+  APPOINTMENT        // Medical, dental, therapy appointments
+  ACTIVITY           // Outings, recreation, community activities
+  TRAINING           // Staff training sessions
+  MEDICAL            // Medication reviews, nursing visits
+  MAINTENANCE        // House maintenance, inspections
+  OTHER              // Miscellaneous events
+}
+
+// Recurrence frequency for calendar events
+enum RecurrenceType {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// House Calendar Events
+model HouseCalendarEvent {
+  id          String            @id @default(cuid())
+  houseId     String
+  clientId    String?           // Optional - null means house-wide event
+
+  eventType   CalendarEventType
+  title       String
+  description String?
+  location    String?
+
+  startDate   DateTime
+  endDate     DateTime?
+  allDay      Boolean           @default(false)
+
+  // Recurring event fields
+  isRecurring       Boolean        @default(false)
+  recurrenceType    RecurrenceType?
+  recurrenceEndDate DateTime?      // When the recurrence stops (null = indefinite)
+  parentEventId     String?        // Links to parent recurring event (null = this is the parent or not recurring)
+
+  createdById String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  house        House              @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  client       Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy    User               @relation(fields: [createdById], references: [id])
+  parentEvent  HouseCalendarEvent?  @relation("RecurringEvents", fields: [parentEventId], references: [id], onDelete: Cascade)
+  childEvents  HouseCalendarEvent[] @relation("RecurringEvents")
+
+  @@index([houseId, startDate])
+  @@index([parentEventId])
+}
+
+// Daily Operations Report Status
+enum ReportStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+}
+
+// Daily Operations Report for house operations tracking
+model DailyOperationsReport {
+  id          String       @id @default(cuid())
+  houseId     String
+  date        DateTime     @db.Date
+  status      ReportStatus @default(DRAFT)
+
+  // Census snapshot
+  censusCount       Int?
+  censusNotes       String?
+
+  // Shift/Staffing info
+  shiftStart        DateTime?
+  shiftEnd          DateTime?
+  staffOnDuty       String?    // JSON array of staff names/ids
+
+  // Daily summary sections
+  medicationNotes   String?    // Medication administration notes
+  mealNotes         String?    // Meals served, dietary accommodations
+  activitiesNotes   String?    // Activities completed
+  incidentNotes     String?    // Any incidents or issues
+  maintenanceNotes  String?    // Maintenance/housekeeping items
+  generalNotes      String?    // Other observations
+
+  // Sign-off
+  submittedById     String?
+  submittedAt       DateTime?
+  reviewedById      String?
+  reviewedAt        DateTime?
+
+  createdById       String
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  house             House      @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdBy         User       @relation("DailyReportCreatedBy", fields: [createdById], references: [id])
+  submittedBy       User?      @relation("DailyReportSubmittedBy", fields: [submittedById], references: [id])
+  reviewedBy        User?      @relation("DailyReportReviewedBy", fields: [reviewedById], references: [id])
+
+  @@unique([houseId, date])
+  @@index([houseId, date])
+}
+
+// DC Daily Checklist for Designated Coordinators
+model DCDailyChecklist {
+  id          String   @id @default(cuid())
+  houseId     String
+  date        DateTime @db.Date
+  visitType   String   // REMOTE, ONSITE
+
+  // Remote Daily Oversight Tasks
+  remoteLogNotesReviewed        Boolean @default(false)
+  remoteGmailChecked            Boolean @default(false)
+  remoteAppointmentsReviewed    Boolean @default(false)
+  remoteCalendarUpdated         Boolean @default(false)
+  remoteScheduleVerified        Boolean @default(false)
+  remoteClockInReviewed         Boolean @default(false)
+  remoteControlledSubstances    Boolean @default(false)
+  remoteMedsAdministered        Boolean @default(false)
+  remoteProgressNotesReviewed   Boolean @default(false)
+  remotePrnDocumented           Boolean @default(false)
+  remoteIncidentReportsReviewed Boolean @default(false)
+  remoteAppointmentsFollowUp    Boolean @default(false)
+  remoteStaffTrainingChecked    Boolean @default(false)
+  remoteEveningMedsReviewed     Boolean @default(false)
+  remoteNarcoticCountsVerified  Boolean @default(false)
+
+  // Onsite Visit Tasks
+  onsiteClockedIn               Boolean @default(false)
+  onsiteHandoffReviewed         Boolean @default(false)
+  onsiteVerbalHandoff           Boolean @default(false)
+  onsiteNarcoticCount           Boolean @default(false)
+  onsitePettyCashCount          Boolean @default(false)
+  onsiteMedQuantitiesReviewed   Boolean @default(false)
+  onsitePrnMedsChecked          Boolean @default(false)
+  onsiteOverflowBinsChecked     Boolean @default(false)
+  onsitePharmacyDeliveryReviewed Boolean @default(false)
+  onsiteMedStorageChecked       Boolean @default(false)
+  onsiteGlucometerSupplies      Boolean @default(false)
+  onsiteStaffInteractions       Boolean @default(false)
+  onsiteRoomsClean              Boolean @default(false)
+  onsiteDietaryFollowed         Boolean @default(false)
+  onsiteActivitiesObserved      Boolean @default(false)
+  onsiteResidentSpoken          Boolean @default(false)
+  onsiteReceiptBinderReviewed   Boolean @default(false)
+  onsiteResidentBindersReviewed Boolean @default(false)
+  onsiteAfterVisitSummaries     Boolean @default(false)
+  onsiteOutcomeTracker          Boolean @default(false)
+  onsiteFireDrillBinder         Boolean @default(false)
+  onsiteCommonAreasCleaned      Boolean @default(false)
+  onsiteFoodLabeled             Boolean @default(false)
+  onsiteSuppliesStocked         Boolean @default(false)
+  onsiteBathroomsCleaned        Boolean @default(false)
+  onsiteGarbageChecked          Boolean @default(false)
+  onsiteIpadCharged             Boolean @default(false)
+  onsiteDoorsSecure             Boolean @default(false)
+  onsiteWaterSoftener           Boolean @default(false)
+  onsiteFurnaceFilter           Boolean @default(false)
+  onsiteExteriorChecked         Boolean @default(false)
+  onsiteStaffCoaching           Boolean @default(false)
+
+  notes                String?
+  followUpItems        String?  // JSON array of follow-up items
+  issuesIdentified     String?  // JSON array of issues
+
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  house         House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdBy     User     @relation("DCChecklistCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([houseId, date])
+  @@index([houseId, date])
+}
+
+// Weekly DC Report to DM
+model WeeklyDCReport {
+  id            String   @id @default(cuid())
+  houseId       String
+  weekStartDate DateTime @db.Date  // Monday of the week
+  weekEndDate   DateTime @db.Date  // Sunday of the week
+  status        String   @default("DRAFT") // DRAFT, SUBMITTED, REVIEWED
+
+  // Weekly Summary Questions
+  overallWeekRating       Int?     // 1-5 rating
+  staffingCoverage        String?  // How was staffing coverage this week?
+  staffPerformance        String?  // Any staff performance highlights or concerns?
+  residentWellbeing       String?  // How are residents doing overall?
+  medicationIssues        String?  // Any medication issues or discrepancies?
+  maintenanceConcerns     String?  // Any maintenance or facility concerns?
+  incidentsSummary        String?  // Summary of any incidents this week
+  appointmentsCompleted   String?  // Appointments completed this week
+  upcomingConcerns        String?  // Any concerns for next week?
+  suppliesNeeded          String?  // Supplies or resources needed?
+  trainingNeeds           String?  // Any staff training needs identified?
+  additionalNotes         String?  // Additional notes for DM
+
+  // Weekly Tasks Completion
+  scheduleCreated         Boolean @default(false)
+  scheduleSubmitted       Boolean @default(false)
+  houseLeadMeeting        Boolean @default(false)
+  receiptsUploaded        Boolean @default(false)
+  notionUpdated           Boolean @default(false)
+  activitiesReviewed      Boolean @default(false)
+
+  // Sign-off
+  submittedById String?
+  submittedAt   DateTime?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  dmComments    String?   // DM feedback/comments
+
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  house         House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdBy     User     @relation("WeeklyReportCreatedBy", fields: [createdById], references: [id])
+  submittedBy   User?    @relation("WeeklyReportSubmittedBy", fields: [submittedById], references: [id])
+  reviewedBy    User?    @relation("WeeklyReportReviewedBy", fields: [reviewedById], references: [id])
+
+  @@unique([houseId, weekStartDate])
+  @@index([houseId, weekStartDate])
+}
+
+// Resource Hub Document Categories (Department-based)
+enum ResourceCategory {
+  HR                  // Employee policies, onboarding, handbooks, evaluations
+  OPERATIONS          // Daily procedures, checklists, house protocols
+  COMPLIANCE          // DHS forms, licensing, state requirements
+  TRAINING            // Training materials, guides, certifications
+  CLINICAL            // Client forms, service agreements, care plans
+  GENERAL             // Company-wide policies, miscellaneous
+}
+
+// Resource Hub Documents (Policies, Forms, Templates)
+model HubResource {
+  id              String           @id @default(cuid())
+  category        ResourceCategory
+  title           String
+  description     String?
+  documentUrl     String
+  fileName        String
+  fileSize        Int?
+  tags            String?          // Comma-separated tags for search/filter
+  sortOrder       Int              @default(0)  // For custom ordering within category
+  isActive        Boolean          @default(true)
+
+  uploadedById    String
+  uploadedAt      DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  uploadedBy      User             @relation("HubResourceUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([category, isActive])
+}
+
+// Resource Hub Tutorials (Video Embeds)
+model HubTutorial {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  embedUrl        String   // YouTube, Vimeo, Scribe embed URL
+  thumbnailUrl    String?
+  duration        String?  // e.g., "5:30"
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+
+  createdById     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  createdBy       User     @relation("HubTutorialCreatedBy", fields: [createdById], references: [id])
+
+  @@index([isActive])
+}
+
+// Site Settings (Key-Value store for customizable content)
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique  // e.g., "resourceHub.welcomeTitle", "resourceHub.welcomeDescription"
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+// Organization Credentials (NetStudy, MN-ITS, Office Info, etc.)
+model OrganizationCredential {
+  id              String   @id @default(cuid())
+  category        String   // OFFICE, HR_SYSTEM, BILLING_SYSTEM, OTHER
+  name            String   // "Main Office", "NetStudy", "MN-ITS"
+
+  // Office-specific fields
+  address         String?
+  phone           String?
+  fax             String?
+
+  // Credential fields
+  websiteUrl      String?
+  loginUsername   String?
+  loginPassword   String?
+  accountNumber   String?
+
+  // Security questions (up to 3)
+  securityQuestion1 String?
+  securityAnswer1   String?
+  securityQuestion2 String?
+  securityAnswer2   String?
+  securityQuestion3 String?
+  securityAnswer3   String?
+
+  // WiFi
+  wifiNetwork     String?
+  wifiPassword    String?
+
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Task Categories for Staff To-Do Lists
+model TaskCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#3B82F6")  // Default blue
+  createdAt DateTime @default(now())
+
+  tasks     Task[]
+}
+
+// Staff To-Do Tasks
+model Task {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  categoryId      String?
+  priority        String    @default("MEDIUM")  // LOW, MEDIUM, HIGH
+  assignedRoles   String    // JSON array: ["ADMIN", "DESIGNATED_COORDINATOR"]
+  houseId         String?   // Optional house connection
+  dueDate         DateTime
+  month           Int       // 1-12
+  year            Int
+
+  // Status & Approval
+  status          String    @default("PENDING")  // PENDING, COMPLETED, APPROVED, INCOMPLETE
+  completedAt     DateTime?
+  completedById   String?
+  completedNote   String?   // Required if INCOMPLETE
+  approvedAt      DateTime?
+  approvedById    String?
+
+  // Recurring
+  isRecurring     Boolean   @default(false)
+  recurringType   String?   // MONTHLY, QUARTERLY, YEARLY
+
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  category        TaskCategory? @relation(fields: [categoryId], references: [id])
+  house           House?        @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdBy       User          @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  completedBy     User?         @relation("TaskCompletedBy", fields: [completedById], references: [id])
+  approvedBy      User?         @relation("TaskApprovedBy", fields: [approvedById], references: [id])
+
+  @@index([houseId])
+  @@index([month, year])
+  @@index([status])
+  @@index([dueDate])
+
+  assignedUsers   TaskAssignment[]
+}
+
+// Task User Assignment (many-to-many)
+model TaskAssignment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+}
+
+// Genoa Pharmacy Delivery Tracking
+model GenoaDelivery {
+  id              String    @id @default(cuid())
+  houseId         String
+  deliveryDate    DateTime
+  deliveryTime    String    // Time of delivery (e.g., "14:30")
+
+  // Who received the delivery
+  receivedById    String
+
+  // Client selection - null means "All Residents Monthly Delivery"
+  clientId        String?
+  isAllResidents  Boolean   @default(false)
+
+  // Manifest photos (JSON array of URLs)
+  manifestPhotos  String    @default("[]")
+
+  // Verification Section
+  medicationsMatch        Boolean?  // Did medications match the delivery manifest?
+  medicationsMatchNotes   String?   // Required explanation if NO
+
+  properlyStored          Boolean?  // Were meds stored in grey Genoa box in office?
+  properlyStoredNotes     String?   // Required explanation if NO
+
+  // Additional notes
+  notes           String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  house           House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  receivedBy      User      @relation("GenoaReceivedBy", fields: [receivedById], references: [id])
+  client          Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([houseId])
+  @@index([deliveryDate])
+}
+
+// Fire Drill Log (Required every 2 months per house)
+model FireDrill {
+  id              String    @id @default(cuid())
+  houseId         String
+  drillDate       DateTime
+  drillTime       String    // Time of drill (e.g., "14:30")
+
+  // Bi-monthly period tracking (1=Jan-Feb, 2=Mar-Apr, 3=May-Jun, 4=Jul-Aug, 5=Sep-Oct, 6=Nov-Dec)
+  biMonthlyPeriod Int
+  year            Int
+
+  // Participant names (JSON array of resident/client names who participated)
+  participants    String    @default("[]")
+
+  // Summary/Analysis/Recommendations
+  summary         String?
+
+  // Completed by (staff member)
+  completedById   String
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  house           House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  completedBy     User      @relation("FireDrillCompletedBy", fields: [completedById], references: [id])
+
+  @@unique([houseId, biMonthlyPeriod, year])
+  @@index([houseId])
+  @@index([drillDate])
+}
+
+// Service Agreement for Billing (per client)
+model ServiceAgreement {
+  id              String    @id @default(cuid())
+  clientId        String
+  houseId         String
+
+  // Agreement Details
+  agreementNumber String?   // Optional agreement/contract number
+  serviceType     String    // CRS, ICS, IHS, etc.
+
+  // Date Range
+  startDate       DateTime
+  endDate         DateTime
+
+  // Billing Information
+  dailyRate       Decimal   @db.Decimal(10, 2)  // Daily rate for this client
+  units           Decimal?  @db.Decimal(10, 2)  // Units billed (if applicable)
+
+  // Document Upload
+  documentUrl     String?
+  documentName    String?
+
+  // Status
+  status          String    @default("ACTIVE")  // ACTIVE, EXPIRED, PENDING, TERMINATED
+
+  // Notes
+  notes           String?
+
+  // Tracking
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  house           House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdBy       User      @relation("ServiceAgreementCreatedBy", fields: [createdById], references: [id])
+
+  @@index([clientId])
+  @@index([houseId])
+  @@index([endDate])
+  @@index([status])
+}
+
+// Billing Report submitted by biller after claims processing
+model BillingReport {
+  id                String    @id @default(cuid())
+
+  // Report Period
+  serviceDateStart  DateTime  @db.Date  // Service date range start (e.g., 01/01/2026)
+  serviceDateEnd    DateTime  @db.Date  // Service date range end (e.g., 01/08/2026)
+  dateProcessed     DateTime  @db.Date  // Date billing was processed
+
+  // MHCP Billing Cycle Info
+  billingCycle      Int?      // 1-26 (MHCP billing cycle number)
+  claimCutOffDate   DateTime? @db.Date  // Claim cut-off date for this cycle
+  eftPaymentDate    DateTime? @db.Date  // Expected EFT payment date
+
+  // Totals (calculated from entries)
+  totalCharges      Decimal   @db.Decimal(12, 2) @default(0)
+  totalClaims       Int       @default(0)
+
+  // Status
+  status            String    @default("SUBMITTED")  // SUBMITTED, PAID, PARTIAL, ISSUE
+
+  // Notes
+  notes             String?
+
+  // Month/Year for filtering
+  month             Int       // 1-12
+  year              Int
+
+  // Tracking
+  createdById       String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  createdBy         User      @relation("BillingReportCreatedBy", fields: [createdById], references: [id])
+  entries           BillingReportEntry[]
+
+  @@index([month, year])
+  @@index([dateProcessed])
+  @@index([billingCycle, year])
+}
+
+// Individual billing entry per house/client in a billing report
+model BillingReportEntry {
+  id                String    @id @default(cuid())
+  billingReportId   String
+
+  // House/Client info
+  houseName         String    // House name (stored for historical record)
+  clientName        String?   // Client name (optional - null for house-level notes)
+
+  // Billing Info
+  totalClaims       Int       @default(0)
+  totalCharges      Decimal   @db.Decimal(10, 2) @default(0)
+
+  // Notes/Status for this entry
+  entryStatus       String?   // null (billed), "No SA" (no service agreement), "No attendance"
+  insuranceProvider String?   // Insurance provider name
+
+  // Sort order for display
+  sortOrder         Int       @default(0)
+
+  createdAt         DateTime  @default(now())
+
+  billingReport     BillingReport @relation(fields: [billingReportId], references: [id], onDelete: Cascade)
+
+  @@index([billingReportId])
+}
+
+// CRS Bi-Weekly Attendance Report for billing compliance
+model AttendanceReport {
+  id              String    @id @default(cuid())
+  houseId         String
+
+  // Bi-weekly period dates (14 days)
+  startDate       DateTime  @db.Date  // Period start date
+  endDate         DateTime  @db.Date  // Period end date
+
+  // Status
+  status          String    @default("DRAFT")  // DRAFT, SUBMITTED
+
+  // Notes
+  notes           String?
+
+  // Tracking
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  house           House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdBy       User      @relation("AttendanceReportCreatedBy", fields: [createdById], references: [id])
+  entries         AttendanceEntry[]
+  receivables     AccountsReceivable[]
+
+  @@unique([houseId, startDate, endDate])
+  @@index([houseId])
+  @@index([startDate, endDate])
+}
+
+// Individual attendance entry per client in an attendance report
+// Attendance Codes: P=Present, H=Hospital, NF=Nursing Facility, FV=Family Visit,
+//                   PP=Partial Present, ER=ER (No Admit), DT=Day Trip, D=Deceased, DC=Discharged, O=Other
+model AttendanceEntry {
+  id                  String    @id @default(cuid())
+  attendanceReportId  String
+
+  // Client info (stored for historical record)
+  clientName          String
+  maId                String?   // MA ID / PMI number
+
+  // Daily attendance codes (1-31 days)
+  day1   String?
+  day2   String?
+  day3   String?
+  day4   String?
+  day5   String?
+  day6   String?
+  day7   String?
+  day8   String?
+  day9   String?
+  day10  String?
+  day11  String?
+  day12  String?
+  day13  String?
+  day14  String?
+  day15  String?
+  day16  String?
+  day17  String?
+  day18  String?
+  day19  String?
+  day20  String?
+  day21  String?
+  day22  String?
+  day23  String?
+  day24  String?
+  day25  String?
+  day26  String?
+  day27  String?
+  day28  String?
+  day29  String?
+  day30  String?
+  day31  String?
+
+  // Calculated totals
+  totalPresent        Int       @default(0)
+  totalAbsent         Int       @default(0)
+  billableDays        Int       @default(0)
+  nonBillableDays     Int       @default(0)
+
+  // Notes for this client
+  notes               String?
+
+  // Daily rate for billing calculation (optional, can come from service agreement)
+  dailyRate           Decimal?  @db.Decimal(10, 2)
+
+  // Sort order for display
+  sortOrder           Int       @default(0)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  attendanceReport    AttendanceReport @relation(fields: [attendanceReportId], references: [id], onDelete: Cascade)
+
+  @@index([attendanceReportId])
+}
+
+// Accounts Receivable - Tracks unbilled amounts by client per billing period
+model AccountsReceivable {
+  id                    String    @id @default(cuid())
+
+  // Link to attendance report and client
+  attendanceReportId    String?
+  clientName            String    // Client name (stored for historical record)
+  houseId               String
+
+  // Billing period
+  periodStart           DateTime  @db.Date
+  periodEnd             DateTime  @db.Date
+
+  // Amount details
+  daysUnbilled          Int       @default(0)
+  dailyRate             Decimal?  @db.Decimal(10, 2)
+  amountOwed            Decimal   @db.Decimal(10, 2) @default(0)
+
+  // Reason for unbilled
+  reason                String    // MISSING_SERVICE_AGREEMENT, SERVICE_AGREEMENT_EXPIRED, SERVICE_AGREEMENT_ISSUE, INSURANCE_ISSUE, OTHER
+  reasonNotes           String?   // Additional details about the issue
+
+  // Resolution
+  status                String    @default("PENDING")  // PENDING, COLLECTED, WRITTEN_OFF, RESOLVED
+  resolvedAt            DateTime?
+  resolvedById          String?
+  resolvedNotes         String?
+  amountCollected       Decimal?  @db.Decimal(10, 2)
+
+  // Tracking
+  createdById           String
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  attendanceReport      AttendanceReport? @relation(fields: [attendanceReportId], references: [id], onDelete: SetNull)
+  house                 House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdBy             User      @relation("ARCreatedBy", fields: [createdById], references: [id])
+  resolvedBy            User?     @relation("ARResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([attendanceReportId])
+  @@index([houseId])
+  @@index([status])
+  @@index([periodStart, periodEnd])
 }

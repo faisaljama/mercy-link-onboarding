@@ -24,8 +24,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Trash2, Camera, User } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, Camera, User, Briefcase } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
+import { formatPhoneInput } from "@/lib/format-phone";
 
 interface House {
   id: string;
@@ -42,15 +44,30 @@ interface Client {
   waiverType: string | null;
   status: string;
   photoUrl: string | null;
+  serviceTypes: string | null;
+  serviceLevel: string | null;
+  isOutOfHome: boolean;
   mhCaseManagerName: string | null;
+  mhCaseManagerOrg: string | null;
   mhCaseManagerEmail: string | null;
   mhCaseManagerPhone: string | null;
   cadiCaseManagerName: string | null;
+  cadiCaseManagerOrg: string | null;
   cadiCaseManagerEmail: string | null;
   cadiCaseManagerPhone: string | null;
   legalRepName: string | null;
   legalRepPhone: string | null;
 }
+
+const SERVICE_TYPE_OPTIONS = [
+  { value: "CRS", label: "CRS (Community Residential Services)" },
+  { value: "ICS", label: "ICS (In-Home Community Support)" },
+  { value: "IHS_WITH_TRAINING", label: "IHS with Training" },
+  { value: "IHS_WITHOUT_TRAINING", label: "IHS without Training" },
+  { value: "NIGHT_SUPERVISION", label: "Night Supervision" },
+  { value: "HOMEMAKING", label: "Homemaking" },
+  { value: "EA_24_HOUR", label: "24 Hour Emergency Assistance" },
+];
 
 export default function EditClientPage({
   params,
@@ -74,10 +91,15 @@ export default function EditClientPage({
     houseId: "",
     waiverType: "",
     status: "ACTIVE",
+    serviceTypes: [] as string[],
+    serviceLevel: "",
+    isOutOfHome: false,
     mhCaseManagerName: "",
+    mhCaseManagerOrg: "",
     mhCaseManagerEmail: "",
     mhCaseManagerPhone: "",
     cadiCaseManagerName: "",
+    cadiCaseManagerOrg: "",
     cadiCaseManagerEmail: "",
     cadiCaseManagerPhone: "",
     legalRepName: "",
@@ -98,6 +120,9 @@ export default function EditClientPage({
         const data = await res.json();
         setClient(data.client);
         setPhotoUrl(data.client.photoUrl || null);
+        const serviceTypes = data.client.serviceTypes
+          ? JSON.parse(data.client.serviceTypes)
+          : [];
         setFormData({
           firstName: data.client.firstName,
           lastName: data.client.lastName,
@@ -106,10 +131,15 @@ export default function EditClientPage({
           houseId: data.client.houseId,
           waiverType: data.client.waiverType || "",
           status: data.client.status,
+          serviceTypes: serviceTypes,
+          serviceLevel: data.client.serviceLevel || "",
+          isOutOfHome: data.client.isOutOfHome || false,
           mhCaseManagerName: data.client.mhCaseManagerName || "",
+          mhCaseManagerOrg: data.client.mhCaseManagerOrg || "",
           mhCaseManagerEmail: data.client.mhCaseManagerEmail || "",
           mhCaseManagerPhone: data.client.mhCaseManagerPhone || "",
           cadiCaseManagerName: data.client.cadiCaseManagerName || "",
+          cadiCaseManagerOrg: data.client.cadiCaseManagerOrg || "",
           cadiCaseManagerEmail: data.client.cadiCaseManagerEmail || "",
           cadiCaseManagerPhone: data.client.cadiCaseManagerPhone || "",
           legalRepName: data.client.legalRepName || "",
@@ -130,21 +160,34 @@ export default function EditClientPage({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingPhoto(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("clientId", id);
-      formData.append("isPhoto", "true");
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setError("Please select an image file (JPEG, PNG, GIF, or WebP)");
+      return;
+    }
 
-      const res = await fetch("/api/documents/upload", {
+    // Max 5MB for photos
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Photo too large. Maximum size is 5MB");
+      return;
+    }
+
+    setUploadingPhoto(true);
+    setError("");
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", file);
+      uploadFormData.append("type", "photo");
+
+      const res = await fetch("/api/upload", {
         method: "POST",
-        body: formData,
+        body: uploadFormData,
       });
 
       if (res.ok) {
         const data = await res.json();
-        setPhotoUrl(data.document.filePath);
+        setPhotoUrl(data.url);
       } else {
         const data = await res.json();
         setError(data.error || "Failed to upload photo");
@@ -175,10 +218,15 @@ export default function EditClientPage({
     setError("");
 
     try {
+      const submitData = {
+        ...formData,
+        photoUrl,
+        serviceTypes: JSON.stringify(formData.serviceTypes),
+      };
       const res = await fetch(`/api/clients/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, photoUrl }),
+        body: JSON.stringify(submitData),
       });
 
       if (!res.ok) {
@@ -437,6 +485,78 @@ export default function EditClientPage({
             </CardContent>
           </Card>
 
+          {/* Service Types */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-blue-600" />
+                Service Types
+              </CardTitle>
+              <CardDescription>Select all applicable services for this client</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3">
+                {SERVICE_TYPE_OPTIONS.map((option) => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={option.value}
+                      checked={formData.serviceTypes.includes(option.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFormData({
+                            ...formData,
+                            serviceTypes: [...formData.serviceTypes, option.value],
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            serviceTypes: formData.serviceTypes.filter((t) => t !== option.value),
+                          });
+                        }
+                      }}
+                    />
+                    <Label htmlFor={option.value} className="text-sm font-normal cursor-pointer">
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label htmlFor="serviceLevel">Service Level</Label>
+                  <Select
+                    value={formData.serviceLevel}
+                    onValueChange={(value) => setFormData({ ...formData, serviceLevel: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BASIC">Basic (245D Basic Services)</SelectItem>
+                      <SelectItem value="INTENSIVE">Intensive (IHS with Training, Night Supervision)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 flex items-end">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isOutOfHome"
+                      checked={formData.isOutOfHome}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, isOutOfHome: checked as boolean })
+                      }
+                    />
+                    <Label htmlFor="isOutOfHome" className="text-sm font-normal cursor-pointer">
+                      Out of Home Services Client
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Contacts */}
           <Card>
             <CardHeader>
@@ -455,6 +575,15 @@ export default function EditClientPage({
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="mhCaseManagerOrg">Organization / Agency</Label>
+                  <Input
+                    id="mhCaseManagerOrg"
+                    value={formData.mhCaseManagerOrg}
+                    onChange={(e) => setFormData({ ...formData, mhCaseManagerOrg: e.target.value })}
+                    placeholder="e.g., Hennepin County Mental Health"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="mhCaseManagerEmail">Email</Label>
                   <Input
                     id="mhCaseManagerEmail"
@@ -469,7 +598,8 @@ export default function EditClientPage({
                     id="mhCaseManagerPhone"
                     type="tel"
                     value={formData.mhCaseManagerPhone}
-                    onChange={(e) => setFormData({ ...formData, mhCaseManagerPhone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, mhCaseManagerPhone: formatPhoneInput(e.target.value) })}
+                    placeholder="###-###-####"
                   />
                 </div>
               </div>
@@ -482,6 +612,15 @@ export default function EditClientPage({
                     id="cadiCaseManagerName"
                     value={formData.cadiCaseManagerName}
                     onChange={(e) => setFormData({ ...formData, cadiCaseManagerName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cadiCaseManagerOrg">Organization / Agency</Label>
+                  <Input
+                    id="cadiCaseManagerOrg"
+                    value={formData.cadiCaseManagerOrg}
+                    onChange={(e) => setFormData({ ...formData, cadiCaseManagerOrg: e.target.value })}
+                    placeholder="e.g., Hennepin County CADI"
                   />
                 </div>
                 <div className="space-y-2">
@@ -499,7 +638,8 @@ export default function EditClientPage({
                     id="cadiCaseManagerPhone"
                     type="tel"
                     value={formData.cadiCaseManagerPhone}
-                    onChange={(e) => setFormData({ ...formData, cadiCaseManagerPhone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, cadiCaseManagerPhone: formatPhoneInput(e.target.value) })}
+                    placeholder="###-###-####"
                   />
                 </div>
               </div>
@@ -520,7 +660,8 @@ export default function EditClientPage({
                     id="legalRepPhone"
                     type="tel"
                     value={formData.legalRepPhone}
-                    onChange={(e) => setFormData({ ...formData, legalRepPhone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, legalRepPhone: formatPhoneInput(e.target.value) })}
+                    placeholder="###-###-####"
                   />
                 </div>
               </div>

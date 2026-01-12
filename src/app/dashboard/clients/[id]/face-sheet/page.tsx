@@ -20,10 +20,17 @@ import {
   DollarSign,
   UserCheck,
   Building2,
+  Users,
+  Monitor,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { PrintTemplate, PrintButton } from "@/components/print-template";
+import { PrintTemplate } from "@/components/print-template";
+import { ViewToggle } from "./view-toggle";
+import { Suspense } from "react";
+import { formatPhoneNumber } from "@/lib/format-phone";
+import { FaceSheetPDFButton } from "@/components/face-sheet-pdf-button";
 
 async function getClient(id: string, houseIds: string[]) {
   const client = await prisma.client.findFirst({
@@ -33,11 +40,36 @@ async function getClient(id: string, houseIds: string[]) {
     },
     include: {
       house: true,
+      additionalProviders: {
+        orderBy: [{ providerType: "asc" }, { providerName: "asc" }],
+      },
     },
   });
 
   return client;
 }
+
+const PROVIDER_TYPE_LABELS: Record<string, string> = {
+  CHIROPRACTOR: "Chiropractor",
+  PHYSICAL_THERAPIST: "Physical Therapist",
+  OCCUPATIONAL_THERAPIST: "Occupational Therapist",
+  SPEECH_THERAPIST: "Speech Therapist",
+  PSYCHOLOGIST: "Psychologist/Counselor",
+  PODIATRIST: "Podiatrist",
+  NEUROLOGIST: "Neurologist",
+  CARDIOLOGIST: "Cardiologist",
+  DERMATOLOGIST: "Dermatologist",
+  AUDIOLOGIST: "Audiologist",
+  NUTRITIONIST: "Nutritionist/Dietitian",
+  PAIN_MANAGEMENT: "Pain Management",
+  WOUND_CARE: "Wound Care",
+  UROLOGIST: "Urologist",
+  GASTROENTEROLOGIST: "Gastroenterologist",
+  PULMONOLOGIST: "Pulmonologist",
+  ENDOCRINOLOGIST: "Endocrinologist",
+  ORTHOPEDIST: "Orthopedist",
+  OTHER: "Other Specialist",
+};
 
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -52,16 +84,18 @@ function ContactCard({
   title,
   icon: Icon,
   name,
+  organization,
   phone,
   address,
 }: {
   title: string;
   icon: React.ElementType;
   name: string | null | undefined;
+  organization?: string | null | undefined;
   phone: string | null | undefined;
   address?: string | null | undefined;
 }) {
-  if (!name && !phone && !address) {
+  if (!name && !phone && !address && !organization) {
     return (
       <div className="p-4 bg-slate-50 rounded-lg">
         <div className="flex items-center gap-2 mb-2">
@@ -80,10 +114,11 @@ function ContactCard({
         <span className="font-medium text-slate-700">{title}</span>
       </div>
       {name && <p className="text-sm font-medium text-slate-900">{name}</p>}
+      {organization && <p className="text-sm text-slate-600">{organization}</p>}
       {phone && (
         <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
           <Phone className="h-3 w-3" />
-          {phone}
+          {formatPhoneNumber(phone)}
         </p>
       )}
       {address && <p className="text-sm text-slate-500 mt-1">{address}</p>}
@@ -93,13 +128,17 @@ function ContactCard({
 
 export default async function FaceSheetPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
   const session = await getSession();
   if (!session) return null;
 
   const { id } = await params;
+  const { view } = await searchParams;
+  const isInternal = view === "internal";
   const houseIds = await getUserHouseIds(session.id);
   const client = await getClient(id, houseIds);
 
@@ -118,10 +157,13 @@ export default async function FaceSheetPage({
           </Button>
         </Link>
         <div className="flex gap-2">
+          <Suspense fallback={<Button variant="outline" size="sm" disabled>Loading...</Button>}>
+            <ViewToggle />
+          </Suspense>
           <Link href={`/dashboard/clients/${client.id}/face-sheet/edit`}>
             <Button variant="outline">Edit Face Sheet</Button>
           </Link>
-          <PrintButton />
+          <FaceSheetPDFButton client={client} isInternal={isInternal} />
         </div>
       </div>
 
@@ -266,7 +308,7 @@ export default async function FaceSheetPage({
                     {client.emergencyContact1Phone && (
                       <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
                         <Phone className="h-3 w-3" />
-                        {client.emergencyContact1Phone}
+                        {formatPhoneNumber(client.emergencyContact1Phone)}
                       </p>
                     )}
                   </>
@@ -283,7 +325,7 @@ export default async function FaceSheetPage({
                     {client.emergencyContact2Phone && (
                       <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
                         <Phone className="h-3 w-3" />
-                        {client.emergencyContact2Phone}
+                        {formatPhoneNumber(client.emergencyContact2Phone)}
                       </p>
                     )}
                   </>
@@ -310,13 +352,16 @@ export default async function FaceSheetPage({
                 {client.mhCaseManagerName ? (
                   <>
                     <p className="text-sm font-medium text-slate-900">{client.mhCaseManagerName}</p>
+                    {client.mhCaseManagerOrg && (
+                      <p className="text-sm text-slate-600">{client.mhCaseManagerOrg}</p>
+                    )}
                     {client.mhCaseManagerEmail && (
                       <p className="text-sm text-slate-600 mt-1">{client.mhCaseManagerEmail}</p>
                     )}
                     {client.mhCaseManagerPhone && (
                       <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
                         <Phone className="h-3 w-3" />
-                        {client.mhCaseManagerPhone}
+                        {formatPhoneNumber(client.mhCaseManagerPhone)}
                       </p>
                     )}
                   </>
@@ -329,13 +374,16 @@ export default async function FaceSheetPage({
                 {client.cadiCaseManagerName ? (
                   <>
                     <p className="text-sm font-medium text-slate-900">{client.cadiCaseManagerName}</p>
+                    {client.cadiCaseManagerOrg && (
+                      <p className="text-sm text-slate-600">{client.cadiCaseManagerOrg}</p>
+                    )}
                     {client.cadiCaseManagerEmail && (
                       <p className="text-sm text-slate-600 mt-1">{client.cadiCaseManagerEmail}</p>
                     )}
                     {client.cadiCaseManagerPhone && (
                       <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
                         <Phone className="h-3 w-3" />
-                        {client.cadiCaseManagerPhone}
+                        {formatPhoneNumber(client.cadiCaseManagerPhone)}
                       </p>
                     )}
                   </>
@@ -351,7 +399,7 @@ export default async function FaceSheetPage({
                     {client.legalRepPhone && (
                       <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
                         <Phone className="h-3 w-3" />
-                        {client.legalRepPhone}
+                        {formatPhoneNumber(client.legalRepPhone)}
                       </p>
                     )}
                   </>
@@ -389,7 +437,7 @@ export default async function FaceSheetPage({
                     {client.guardianPhone && (
                       <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
                         <Phone className="h-3 w-3" />
-                        {client.guardianPhone}
+                        {formatPhoneNumber(client.guardianPhone)}
                       </p>
                     )}
                     {client.guardianAddress && (
@@ -415,7 +463,7 @@ export default async function FaceSheetPage({
                     {client.repPayeePhone && (
                       <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
                         <Phone className="h-3 w-3" />
-                        {client.repPayeePhone}
+                        {formatPhoneNumber(client.repPayeePhone)}
                       </p>
                     )}
                     {client.repPayeeAddress && (
@@ -462,6 +510,75 @@ export default async function FaceSheetPage({
           </CardContent>
         </Card>
 
+        {/* Internal Information - Staffing & Rates (Only shown in Internal view) */}
+        {isInternal && (
+          <Card className="print:shadow-none print:border border-purple-200 bg-purple-50/30 print:bg-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="h-5 w-5 text-purple-600" />
+                Internal - Staffing & Rates
+                <Badge variant="outline" className="ml-2 text-purple-600 border-purple-300">Internal Only</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-4 gap-6">
+                <div>
+                  <InfoRow label="Daily Rate" value={client.dailyRate ? `$${Number(client.dailyRate).toFixed(2)}` : null} />
+                </div>
+                <div>
+                  <InfoRow label="Staffing Ratio" value={client.staffingRatio || null} />
+                </div>
+                <div>
+                  <InfoRow label="Individual Hours" value={client.individualHours ? `${Number(client.individualHours)} hrs` : null} />
+                </div>
+                <div>
+                  <InfoRow label="Shared Staffing Hours" value={client.sharedStaffingHours ? `${Number(client.sharedStaffingHours)} hrs` : null} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Internal Information - MyChart Login (Only shown in Internal view) */}
+        {isInternal && (
+          <Card className="print:shadow-none print:border border-purple-200 bg-purple-50/30 print:bg-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Monitor className="h-5 w-5 text-purple-600" />
+                Internal - MyChart Login
+                <Badge variant="outline" className="ml-2 text-purple-600 border-purple-300">Internal Only</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <InfoRow label="Username" value={client.myChartUsername || null} />
+                </div>
+                <div>
+                  <InfoRow label="Password" value={client.myChartPassword ? "••••••••" : null} />
+                </div>
+                <div>
+                  {client.myChartUrl ? (
+                    <div className="flex justify-between py-1.5 border-b border-slate-100 last:border-0">
+                      <span className="text-sm text-slate-500">Portal URL</span>
+                      <a
+                        href={client.myChartUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        Open Portal <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  ) : (
+                    <InfoRow label="Portal URL" value={null} />
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Medical Providers */}
         <Card className="print:shadow-none print:border">
           <CardHeader className="pb-3">
@@ -476,6 +593,7 @@ export default async function FaceSheetPage({
                 title="Pharmacy"
                 icon={Pill}
                 name={client.pharmacyName}
+                organization={client.pharmacyOrg}
                 phone={client.pharmacyPhone}
                 address={client.pharmacyAddress}
               />
@@ -483,6 +601,7 @@ export default async function FaceSheetPage({
                 title="Primary Care"
                 icon={Stethoscope}
                 name={client.primaryCareName}
+                organization={client.primaryCareOrg}
                 phone={client.primaryCarePhone}
                 address={client.primaryCareAddress}
               />
@@ -490,6 +609,7 @@ export default async function FaceSheetPage({
                 title="Psychiatrist"
                 icon={Heart}
                 name={client.psychiatristName}
+                organization={client.psychiatristOrg}
                 phone={client.psychiatristPhone}
                 address={client.psychiatristAddress}
               />
@@ -497,6 +617,7 @@ export default async function FaceSheetPage({
                 title="Dental"
                 icon={Activity}
                 name={client.dentalName}
+                organization={client.dentalOrg}
                 phone={client.dentalPhone}
                 address={client.dentalAddress}
               />
@@ -504,9 +625,37 @@ export default async function FaceSheetPage({
                 title="Vision"
                 icon={Eye}
                 name={client.visionName}
+                organization={client.visionOrg}
                 phone={client.visionPhone}
                 address={client.visionAddress}
               />
+              {/* Additional Providers */}
+              {client.additionalProviders.map((provider) => (
+                <div key={provider.id} className="p-4 bg-slate-50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Stethoscope className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-slate-700">
+                      {PROVIDER_TYPE_LABELS[provider.providerType] || provider.providerType}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-slate-900">{provider.providerName}</p>
+                  {provider.organization && (
+                    <p className="text-sm text-slate-600">{provider.organization}</p>
+                  )}
+                  {provider.phone && (
+                    <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
+                      <Phone className="h-3 w-3" />
+                      {formatPhoneNumber(provider.phone)}
+                    </p>
+                  )}
+                  {provider.address && (
+                    <p className="text-sm text-slate-500 mt-1">{provider.address}</p>
+                  )}
+                  {provider.notes && (
+                    <p className="text-sm text-slate-500 italic mt-1">{provider.notes}</p>
+                  )}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

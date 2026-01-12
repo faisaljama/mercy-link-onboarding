@@ -78,9 +78,17 @@ export function NotificationBell() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case "OVERDUE":
+      case "TASK_OVERDUE":
+      case "MEETING_OVERDUE":
         return "bg-red-500";
       case "DEADLINE_WARNING":
+      case "TASK_DUE_SOON":
+      case "MEETING_REMINDER":
         return "bg-orange-500";
+      case "TASK_AWAITING_APPROVAL":
+        return "bg-yellow-500";
+      case "TASK_ASSIGNED":
+        return "bg-blue-500";
       default:
         return "bg-blue-500";
     }

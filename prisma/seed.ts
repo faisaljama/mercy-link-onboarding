@@ -10,10 +10,10 @@ async function main() {
   // Create admin user (Faisal)
   const adminPassword = await hash("admin123", 12);
   const admin = await prisma.user.upsert({
-    where: { email: "faisal@mercylink.com" },
+    where: { email: "faisal@mercylinkmn.com" },
     update: {},
     create: {
-      email: "faisal@mercylink.com",
+      email: "faisal@mercylinkmn.com",
       password: adminPassword,
       name: "Faisal",
       role: "ADMIN",
@@ -23,16 +23,55 @@ async function main() {
 
   // Create DM user (Brittany)
   const dm = await prisma.user.upsert({
-    where: { email: "brittany@mercylink.com" },
+    where: { email: "brittany@mercylinkmn.com" },
     update: {},
     create: {
-      email: "brittany@mercylink.com",
+      email: "brittany@mercylinkmn.com",
       password: adminPassword,
       name: "Brittany",
       role: "ADMIN",
     },
   });
   console.log("Created DM user:", dm.email);
+
+  // Create Adam user
+  const adam = await prisma.user.upsert({
+    where: { email: "adam@mercylinkmn.com" },
+    update: {},
+    create: {
+      email: "adam@mercylinkmn.com",
+      password: adminPassword,
+      name: "Adam",
+      role: "ADMIN",
+    },
+  });
+  console.log("Created user:", adam.email);
+
+  // Create Guled user
+  const guled = await prisma.user.upsert({
+    where: { email: "guled.jama@mercylinkmn.com" },
+    update: {},
+    create: {
+      email: "guled.jama@mercylinkmn.com",
+      password: adminPassword,
+      name: "Guled Jama",
+      role: "ADMIN",
+    },
+  });
+  console.log("Created user:", guled.email);
+
+  // Create Mohamed user
+  const mohamed = await prisma.user.upsert({
+    where: { email: "mohamed@mercylinkmn.com" },
+    update: {},
+    create: {
+      email: "mohamed@mercylinkmn.com",
+      password: adminPassword,
+      name: "Mohamed",
+      role: "ADMIN",
+    },
+  });
+  console.log("Created user:", mohamed.email);
 
   // Create houses (8 CRS locations)
   const housesData = [
@@ -167,7 +206,7 @@ async function main() {
       data: {
         firstName,
         lastName,
-        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@mercylink.com`,
+        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@mercylinkmn.com`,
         phone: `(651) 555-${String(Math.floor(Math.random() * 9000) + 1000)}`,
         hireDate,
         position,
@@ -237,10 +276,10 @@ async function main() {
   // Create DC user and assign to houses
   const dcPassword = await hash("dc123", 12);
   const dc = await prisma.user.upsert({
-    where: { email: "dc@mercylink.com" },
+    where: { email: "dc@mercylinkmn.com" },
     update: {},
     create: {
-      email: "dc@mercylink.com",
+      email: "dc@mercylinkmn.com",
       password: dcPassword,
       name: "Test DC",
       role: "DESIGNATED_COORDINATOR",

@@ -193,15 +193,23 @@ export default function NewUserPage() {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="LEAD_STAFF">Lead Staff</SelectItem>
-                    <SelectItem value="DESIGNATED_COORDINATOR">Designated Coordinator</SelectItem>
+                    <SelectItem value="LEAD_STAFF">Lead Staff (DSP)</SelectItem>
+                    <SelectItem value="DESIGNATED_COORDINATOR">Designated Coordinator (DC)</SelectItem>
+                    <SelectItem value="DESIGNATED_MANAGER">Designated Manager (DM)</SelectItem>
+                    <SelectItem value="OPERATIONS">Operations</SelectItem>
+                    <SelectItem value="HR">Human Resources (HR)</SelectItem>
+                    <SelectItem value="FINANCE">Finance</SelectItem>
                     <SelectItem value="ADMIN">Admin</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-slate-500">
-                  {formData.role === "ADMIN" && "Admins have full access to all houses and settings"}
-                  {formData.role === "DESIGNATED_COORDINATOR" && "Coordinators can manage compliance for assigned houses"}
-                  {formData.role === "LEAD_STAFF" && "Lead Staff can view and update compliance for assigned houses"}
+                  {formData.role === "ADMIN" && "Full access to all houses, settings, and admin functions"}
+                  {formData.role === "DESIGNATED_MANAGER" && "Manager-level access for assigned houses"}
+                  {formData.role === "DESIGNATED_COORDINATOR" && "Coordinator access for managing compliance"}
+                  {formData.role === "OPERATIONS" && "Operations team member access"}
+                  {formData.role === "HR" && "Human Resources access"}
+                  {formData.role === "FINANCE" && "Finance and billing access"}
+                  {formData.role === "LEAD_STAFF" && "Lead Staff can view assigned houses"}
                 </p>
               </div>
             </CardContent>

@@ -62,6 +62,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Assign the creating user to this house
+    await prisma.userHouse.create({
+      data: {
+        userId: session.id,
+        houseId: house.id,
+      },
+    });
+
     // Create audit log
     await prisma.auditLog.create({
       data: {

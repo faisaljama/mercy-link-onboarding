@@ -72,6 +72,8 @@ function getStatusBadge(status: string) {
 
 function getTypeBadge(type: string) {
   switch (type) {
+    case "CRS_HOME_SAFETY":
+      return <Badge variant="outline" className="text-blue-600">CRS Home Safety</Badge>;
     case "MONTHLY_HOUSE":
       return <Badge variant="outline">Monthly House</Badge>;
     case "QUARTERLY_CLIENT":

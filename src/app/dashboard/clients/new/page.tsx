@@ -34,9 +34,15 @@ export default function NewClientPage() {
     admissionDate: new Date().toISOString().split("T")[0],
     houseId: "",
     waiverType: "",
-    caseManagerName: "",
-    caseManagerEmail: "",
-    caseManagerPhone: "",
+    // Mental Health Case Manager
+    mhCaseManagerName: "",
+    mhCaseManagerEmail: "",
+    mhCaseManagerPhone: "",
+    // CADI Case Manager
+    cadiCaseManagerName: "",
+    cadiCaseManagerEmail: "",
+    cadiCaseManagerPhone: "",
+    // Legal Rep
     legalRepName: "",
     legalRepPhone: "",
   });
@@ -182,62 +188,98 @@ export default function NewClientPage() {
             </CardContent>
           </Card>
 
-          {/* Contacts */}
+          {/* Case Managers */}
           <Card>
             <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-              <CardDescription>Case manager and legal representative details</CardDescription>
+              <CardTitle>Case Managers</CardTitle>
+              <CardDescription>Mental Health and CADI case manager details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <h4 className="font-medium text-slate-700">Case Manager</h4>
+                <h4 className="font-medium text-slate-700">Mental Health Case Manager</h4>
                 <div className="space-y-2">
-                  <Label htmlFor="caseManagerName">Name</Label>
+                  <Label htmlFor="mhCaseManagerName">Name</Label>
                   <Input
-                    id="caseManagerName"
-                    value={formData.caseManagerName}
-                    onChange={(e) => setFormData({ ...formData, caseManagerName: e.target.value })}
+                    id="mhCaseManagerName"
+                    value={formData.mhCaseManagerName}
+                    onChange={(e) => setFormData({ ...formData, mhCaseManagerName: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="caseManagerEmail">Email</Label>
+                  <Label htmlFor="mhCaseManagerEmail">Email</Label>
                   <Input
-                    id="caseManagerEmail"
+                    id="mhCaseManagerEmail"
                     type="email"
-                    value={formData.caseManagerEmail}
-                    onChange={(e) => setFormData({ ...formData, caseManagerEmail: e.target.value })}
+                    value={formData.mhCaseManagerEmail}
+                    onChange={(e) => setFormData({ ...formData, mhCaseManagerEmail: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="caseManagerPhone">Phone</Label>
+                  <Label htmlFor="mhCaseManagerPhone">Phone</Label>
                   <Input
-                    id="caseManagerPhone"
+                    id="mhCaseManagerPhone"
                     type="tel"
-                    value={formData.caseManagerPhone}
-                    onChange={(e) => setFormData({ ...formData, caseManagerPhone: e.target.value })}
+                    value={formData.mhCaseManagerPhone}
+                    onChange={(e) => setFormData({ ...formData, mhCaseManagerPhone: e.target.value })}
                   />
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-medium text-slate-700">Legal Representative</h4>
+                <h4 className="font-medium text-slate-700">CADI Case Manager</h4>
                 <div className="space-y-2">
-                  <Label htmlFor="legalRepName">Name</Label>
+                  <Label htmlFor="cadiCaseManagerName">Name</Label>
                   <Input
-                    id="legalRepName"
-                    value={formData.legalRepName}
-                    onChange={(e) => setFormData({ ...formData, legalRepName: e.target.value })}
+                    id="cadiCaseManagerName"
+                    value={formData.cadiCaseManagerName}
+                    onChange={(e) => setFormData({ ...formData, cadiCaseManagerName: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="legalRepPhone">Phone</Label>
+                  <Label htmlFor="cadiCaseManagerEmail">Email</Label>
                   <Input
-                    id="legalRepPhone"
+                    id="cadiCaseManagerEmail"
+                    type="email"
+                    value={formData.cadiCaseManagerEmail}
+                    onChange={(e) => setFormData({ ...formData, cadiCaseManagerEmail: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cadiCaseManagerPhone">Phone</Label>
+                  <Input
+                    id="cadiCaseManagerPhone"
                     type="tel"
-                    value={formData.legalRepPhone}
-                    onChange={(e) => setFormData({ ...formData, legalRepPhone: e.target.value })}
+                    value={formData.cadiCaseManagerPhone}
+                    onChange={(e) => setFormData({ ...formData, cadiCaseManagerPhone: e.target.value })}
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Legal Representative */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Legal Representative</CardTitle>
+              <CardDescription>Guardian or legal representative details</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="legalRepName">Name</Label>
+                <Input
+                  id="legalRepName"
+                  value={formData.legalRepName}
+                  onChange={(e) => setFormData({ ...formData, legalRepName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="legalRepPhone">Phone</Label>
+                <Input
+                  id="legalRepPhone"
+                  type="tel"
+                  value={formData.legalRepPhone}
+                  onChange={(e) => setFormData({ ...formData, legalRepPhone: e.target.value })}
+                />
               </div>
             </CardContent>
           </Card>

@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { HouseUtilities } from "./house-utilities";
+import { HouseTasks } from "./house-tasks";
 
 async function getHouse(id: string, houseIds: string[]) {
   if (!houseIds.includes(id)) return null;
@@ -267,6 +269,9 @@ export default async function HouseDetailPage({
                 <TabsTrigger value="employees">
                   Staff ({house.employees.length})
                 </TabsTrigger>
+                <TabsTrigger value="tasks">
+                  Tasks
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="clients" className="mt-4">
@@ -383,10 +388,17 @@ export default async function HouseDetailPage({
                   </Table>
                 )}
               </TabsContent>
+
+              <TabsContent value="tasks" className="mt-4">
+                <HouseTasks houseId={house.id} />
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
       </div>
+
+      {/* Utilities Section */}
+      <HouseUtilities houseId={house.id} userRole={session.role} />
     </div>
   );
 }

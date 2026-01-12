@@ -42,6 +42,35 @@ interface Client {
 
 // Default checklist items by type
 const checklistTemplates: Record<string, { label: string; category: string }[]> = {
+  CRS_HOME_SAFETY: [
+    // Emergency Procedures
+    { label: "A list of emergency phone numbers is posted", category: "Emergency Procedures" },
+    { label: "A written fire/emergency escape plan is posted", category: "Emergency Procedures" },
+    { label: "An operable flashlight and radio or television set that does not require electricity", category: "Emergency Procedures" },
+    { label: "Accessible first-aid supplies", category: "Emergency Procedures" },
+    { label: "An operable telephone", category: "Emergency Procedures" },
+    // Physical Environment
+    { label: "Exit doors and windows are not obstructed and are easily opened from the inside", category: "Physical Environment" },
+    { label: "The wiring appears safe; no known hazards exist", category: "Physical Environment" },
+    { label: "Extension cords are appropriately used and are not used in place of permanent wiring", category: "Physical Environment" },
+    { label: "A fire extinguisher with a minimum rating of 2A:10BC is maintained in the home", category: "Physical Environment" },
+    { label: "All smoke detectors work and are properly installed on all levels of the home", category: "Physical Environment" },
+    { label: "All interior doors can be unlocked from the outside and the opening device is readily accessible in case of emergency", category: "Physical Environment" },
+    { label: "The home is clean and free from accumulations of dirt, grease, garbage, peeling paint, vermin and insects", category: "Physical Environment" },
+    { label: "Outside property is free from debris and safety hazards. Exterior stairs and walkways are free of ice and snow", category: "Physical Environment" },
+    { label: "When in use, fireplaces, wood burning stoves, and hot surfaces that could cause burns are protected by guards", category: "Physical Environment" },
+    { label: "The heating system in the home is maintained in good working condition", category: "Physical Environment" },
+    // Home Safety & Health
+    { label: "Knives, tools, matches, and other potentially hazardous materials are not accessible to persons receiving services (as identified in service plans)", category: "Home Safety & Health" },
+    { label: "Chemicals, detergents, and other toxic substances are not stored with food products or accessible in any way that poses a risk", category: "Home Safety & Health" },
+    { label: "Combustible items are properly stored at least 36 inches from any heating sources", category: "Home Safety & Health" },
+    { label: "Individual clean bed linens, towels, wash cloths are provided for each person receiving services", category: "Home Safety & Health" },
+    { label: "Food is handled and properly stored to prevent contamination, spoilage, or a threat to health", category: "Home Safety & Health" },
+    { label: "Schedule II controlled substances are stored in a locked storage area permitting access only by authorized persons", category: "Home Safety & Health" },
+    { label: "There is a safe water supply in the home", category: "Home Safety & Health" },
+    { label: "The water temperature does not exceed 120 degrees Fahrenheit to prevent scalding", category: "Home Safety & Health" },
+    { label: "Weapons and ammunition are stored separately in locked areas that are not accessible or visible to persons receiving services", category: "Home Safety & Health" },
+  ],
   MONTHLY_HOUSE: [
     { label: "Medication storage secure and organized", category: "Medications" },
     { label: "Medication administration records (MARs) current", category: "Medications" },
@@ -55,6 +84,12 @@ const checklistTemplates: Record<string, { label: string; category: string }[]> 
     { label: "Client personal items secure", category: "Client Rights" },
     { label: "Staff schedule posted", category: "Staffing" },
     { label: "Communication log current", category: "Documentation" },
+    { label: "All client rent payments collected for the month", category: "Financial" },
+    { label: "Rent collection records documented with payment method", category: "Financial" },
+    { label: "DC sign-off completed for rent payments", category: "Financial" },
+    { label: "All house expense receipts uploaded", category: "Financial" },
+    { label: "House expenses properly categorized", category: "Financial" },
+    { label: "Bill.com card reconciliation complete", category: "Financial" },
   ],
   QUARTERLY_CLIENT: [
     { label: "Service plan goals reviewed", category: "Service Plan" },
@@ -66,6 +101,9 @@ const checklistTemplates: Record<string, { label: string; category: string }[]> 
     { label: "Behavioral support plan current (if applicable)", category: "Behavior" },
     { label: "Incident reports reviewed", category: "Documentation" },
     { label: "Emergency contact info verified", category: "Documentation" },
+    { label: "Rent payments current for the quarter", category: "Financial" },
+    { label: "No outstanding rent balance", category: "Financial" },
+    { label: "Payment history reviewed with client (if applicable)", category: "Financial" },
   ],
   ANNUAL_REVIEW: [
     { label: "All staff training current", category: "Staffing" },
@@ -78,6 +116,10 @@ const checklistTemplates: Record<string, { label: string; category: string }[]> 
     { label: "Quality improvement goals set", category: "Quality" },
     { label: "Incident trend analysis completed", category: "Quality" },
     { label: "Client satisfaction surveys completed", category: "Quality" },
+    { label: "Annual rent collection summary complete", category: "Financial" },
+    { label: "All rent discrepancies resolved", category: "Financial" },
+    { label: "Annual expense report documented", category: "Financial" },
+    { label: "Financial record keeping audit completed", category: "Financial" },
   ],
   INCIDENT_FOLLOWUP: [
     { label: "Incident properly documented", category: "Documentation" },
@@ -164,7 +206,7 @@ export function NewChecklistDialog({
     }
   };
 
-  const needsHouse = formData.checklistType === "MONTHLY_HOUSE" || formData.checklistType === "ANNUAL_REVIEW";
+  const needsHouse = formData.checklistType === "CRS_HOME_SAFETY" || formData.checklistType === "MONTHLY_HOUSE" || formData.checklistType === "ANNUAL_REVIEW";
   const needsClient = formData.checklistType === "QUARTERLY_CLIENT";
 
   return (
@@ -196,6 +238,7 @@ export function NewChecklistDialog({
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="CRS_HOME_SAFETY">CRS Home Safety Checklist (Monthly)</SelectItem>
                     <SelectItem value="MONTHLY_HOUSE">Monthly House Review</SelectItem>
                     <SelectItem value="QUARTERLY_CLIENT">Quarterly Client Review</SelectItem>
                     <SelectItem value="ANNUAL_REVIEW">Annual Review</SelectItem>

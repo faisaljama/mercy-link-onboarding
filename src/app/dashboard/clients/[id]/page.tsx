@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import {
   User,
@@ -14,14 +13,14 @@ import {
   Calendar,
   FileText,
   CheckCircle2,
-  Clock,
-  AlertTriangle,
   ArrowLeft,
+  ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { format, differenceInDays } from "date-fns";
-import { ComplianceChecklist } from "./compliance-checklist";
-import { ClientDocuments } from "./client-documents";
+import { MonthlySummaries } from "./monthly-summaries";
+import { SupportPlans } from "./support-plans";
+import { MeetingComplianceWrapper } from "./meeting-compliance-wrapper";
 
 async function getClient(id: string, houseIds: string[]) {
   const client = await prisma.client.findFirst({
@@ -31,32 +30,19 @@ async function getClient(id: string, houseIds: string[]) {
     },
     include: {
       house: true,
-      complianceItems: {
-        orderBy: { dueDate: "asc" },
+      meetingCompliance: {
+        orderBy: [{ year: "asc" }, { meetingType: "asc" }],
         include: {
-          documents: true,
+          createdBy: { select: { id: true, name: true } },
+          documents: {
+            orderBy: { uploadedAt: "desc" },
+          },
         },
       },
-      documents: true,
     },
   });
 
   return client;
-}
-
-function getStatusBadge(status: string, dueDate: Date) {
-  if (status === "COMPLETED") {
-    return <Badge className="bg-green-100 text-green-800"><CheckCircle2 className="mr-1 h-3 w-3" />Completed</Badge>;
-  }
-  if (status === "OVERDUE") {
-    return <Badge className="bg-red-100 text-red-800"><AlertTriangle className="mr-1 h-3 w-3" />Overdue</Badge>;
-  }
-
-  const daysUntil = differenceInDays(dueDate, new Date());
-  if (daysUntil <= 7) {
-    return <Badge className="bg-orange-100 text-orange-800"><Clock className="mr-1 h-3 w-3" />Due Soon</Badge>;
-  }
-  return <Badge className="bg-blue-100 text-blue-800"><Clock className="mr-1 h-3 w-3" />Pending</Badge>;
 }
 
 export default async function ClientDetailPage({
@@ -75,9 +61,9 @@ export default async function ClientDetailPage({
     notFound();
   }
 
-  const overdueCount = client.complianceItems.filter((i) => i.status === "OVERDUE").length;
-  const pendingCount = client.complianceItems.filter((i) => i.status === "PENDING").length;
-  const completedCount = client.complianceItems.filter((i) => i.status === "COMPLETED").length;
+  // Calculate meeting compliance stats
+  const totalMeetings = client.meetingCompliance.length;
+  const totalDocuments = client.meetingCompliance.reduce((sum, m) => sum + m.documents.length, 0);
 
   return (
     <div className="space-y-6">
@@ -130,15 +116,15 @@ export default async function ClientDetailPage({
       </div>
 
       {/* Stats Row */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
+                <p className="text-sm text-slate-500">Total Meetings</p>
+                <p className="text-2xl font-bold text-blue-600">{totalMeetings}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-200" />
+              <ClipboardList className="h-8 w-8 text-blue-200" />
             </div>
           </CardContent>
         </Card>
@@ -146,21 +132,10 @@ export default async function ClientDetailPage({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Pending</p>
-                <p className="text-2xl font-bold text-orange-600">{pendingCount}</p>
+                <p className="text-sm text-slate-500">Documents Uploaded</p>
+                <p className="text-2xl font-bold text-green-600">{totalDocuments}</p>
               </div>
-              <Clock className="h-8 w-8 text-orange-200" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Completed</p>
-                <p className="text-2xl font-bold text-green-600">{completedCount}</p>
-              </div>
-              <CheckCircle2 className="h-8 w-8 text-green-200" />
+              <FileText className="h-8 w-8 text-green-200" />
             </div>
           </CardContent>
         </Card>
@@ -260,79 +235,30 @@ export default async function ClientDetailPage({
           </CardContent>
         </Card>
 
-        {/* Compliance Checklist */}
+        {/* 245D Compliance Documents */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Compliance & Documents</CardTitle>
+            <CardTitle>245D Compliance Documents</CardTitle>
             <CardDescription>
-              Track required documents and deadlines per Minnesota Statutes Chapter 245D
+              Track required documents per Minnesota Statutes Chapter 245D
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="compliance">
-              <TabsList>
-                <TabsTrigger value="compliance">Compliance</TabsTrigger>
-                <TabsTrigger value="documents">
-                  Documents ({client.documents.length})
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="compliance" className="mt-4">
-                <Tabs defaultValue="all">
-                  <TabsList>
-                    <TabsTrigger value="all">All Items</TabsTrigger>
-                    <TabsTrigger value="overdue" className="text-red-600">
-                      Overdue ({overdueCount})
-                    </TabsTrigger>
-                    <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
-                    <TabsTrigger value="completed">Completed ({completedCount})</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="all" className="mt-4">
-                    <ComplianceChecklist
-                      items={client.complianceItems}
-                      clientId={client.id}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="overdue" className="mt-4">
-                    <ComplianceChecklist
-                      items={client.complianceItems.filter((i) => i.status === "OVERDUE")}
-                      clientId={client.id}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="pending" className="mt-4">
-                    <ComplianceChecklist
-                      items={client.complianceItems.filter((i) => i.status === "PENDING")}
-                      clientId={client.id}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="completed" className="mt-4">
-                    <ComplianceChecklist
-                      items={client.complianceItems.filter((i) => i.status === "COMPLETED")}
-                      clientId={client.id}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </TabsContent>
-
-              <TabsContent value="documents" className="mt-4">
-                <ClientDocuments
-                  clientId={client.id}
-                  complianceItems={client.complianceItems.map((i) => ({
-                    id: i.id,
-                    itemName: i.itemName,
-                    itemType: i.itemType,
-                  }))}
-                  canDelete={session.role !== "LEAD_STAFF"}
-                />
-              </TabsContent>
-            </Tabs>
+            <MeetingComplianceWrapper
+              clientId={client.id}
+              clientName={`${client.firstName} ${client.lastName}`}
+              houseName={client.house.name}
+              admissionDate={client.admissionDate.toISOString()}
+            />
           </CardContent>
         </Card>
       </div>
+
+      {/* Monthly Summaries */}
+      <MonthlySummaries clientId={client.id} />
+
+      {/* Support Plans */}
+      <SupportPlans clientId={client.id} />
     </div>
   );
 }

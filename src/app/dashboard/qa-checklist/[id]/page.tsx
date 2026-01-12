@@ -14,11 +14,11 @@ import {
   Clock,
   Home,
   User,
-  Printer,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { UpdateChecklistForm } from "./update-form";
+import { QAChecklistPDFButton } from "@/components/qa-checklist-pdf-button";
 
 interface ChecklistItem {
   label: string;
@@ -137,10 +137,13 @@ export default async function QAChecklistDetailPage({
             Back to Checklists
           </Button>
         </Link>
-        <Button variant="outline" onClick={() => window.print()}>
-          <Printer className="mr-2 h-4 w-4" />
-          Print
-        </Button>
+        <QAChecklistPDFButton
+          checklist={checklist}
+          items={items}
+          house={house}
+          client={client}
+          reviewer={reviewer}
+        />
       </div>
 
       {/* Header */}
@@ -303,16 +306,8 @@ export default async function QAChecklistDetailPage({
 
       {/* Edit Form (only for authorized users) */}
       {canEdit && checklist.status !== "COMPLETED" && (
-        <div className="print:hidden">
-          <UpdateChecklistForm checklist={checklist} items={items} />
-        </div>
+        <UpdateChecklistForm checklist={checklist} items={items} />
       )}
-
-      {/* Print Footer */}
-      <div className="hidden print:block text-center text-xs text-slate-400 pt-4 border-t">
-        <p>Mercy Link MN, LLC - 245D Quality Assurance Review</p>
-        <p>Printed on {format(new Date(), "MMMM d, yyyy 'at' h:mm a")}</p>
-      </div>
     </div>
   );
 }

@@ -33,7 +33,8 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      // Always go to welcome page first
+      router.push("/dashboard/welcome");
       router.refresh();
     } catch {
       setError("An error occurred. Please try again.");

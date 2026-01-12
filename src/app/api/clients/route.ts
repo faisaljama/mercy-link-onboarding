@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     const admission = new Date(admissionDate);
 
-    // Create client with compliance items in a transaction
+    // Create client with compliance items and admission record in a transaction
     const client = await prisma.$transaction(async (tx) => {
       const newClient = await tx.client.create({
         data: {
@@ -96,6 +96,16 @@ export async function POST(request: NextRequest) {
           statuteRef: item.statuteRef,
           clientId: newClient.id,
         })),
+      });
+
+      // Auto-create admission record in the register
+      await tx.admissionDischarge.create({
+        data: {
+          clientId: newClient.id,
+          type: "ADMISSION",
+          date: admission,
+          notes: "Auto-generated on client creation",
+        },
       });
 
       return newClient;

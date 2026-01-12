@@ -19,6 +19,8 @@ import {
   MapPin,
   AlertTriangle,
   CheckCircle2,
+  Building,
+  Briefcase,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -65,6 +67,53 @@ async function getHouses(houseIds: string[]) {
   return houses;
 }
 
+// Get out of home services clients
+async function getOutOfHomeClients(houseIds: string[]) {
+  const clients = await prisma.client.findMany({
+    where: {
+      houseId: { in: houseIds },
+      status: "ACTIVE",
+      isOutOfHome: true,
+    },
+    include: {
+      house: true,
+    },
+    orderBy: { lastName: "asc" },
+  });
+
+  return clients;
+}
+
+function getServiceLevelLabel(level: string | null) {
+  switch (level) {
+    case "BASIC":
+      return "Basic (245D)";
+    case "INTENSIVE":
+      return "Intensive";
+    default:
+      return "—";
+  }
+}
+
+function parseServiceTypes(serviceTypes: string | null): string[] {
+  if (!serviceTypes) return [];
+  try {
+    return JSON.parse(serviceTypes) as string[];
+  } catch {
+    return [];
+  }
+}
+
+const SERVICE_TYPE_LABELS: Record<string, string> = {
+  CRS: "CRS",
+  ICS: "ICS",
+  IHS_WITH_TRAINING: "IHS+T",
+  IHS_WITHOUT_TRAINING: "IHS",
+  NIGHT_SUPERVISION: "Night",
+  HOMEMAKING: "HM",
+  EA_24_HOUR: "24hr EA",
+};
+
 function getComplianceStatus(overdueCount: number) {
   if (overdueCount > 0) {
     return {
@@ -86,6 +135,11 @@ export default async function HousesPage() {
 
   const houseIds = await getUserHouseIds(session.id);
   const houses = await getHouses(houseIds);
+  const outOfHomeClients = await getOutOfHomeClients(houseIds);
+
+  // Separate CRS houses from Out of Home houses
+  const crsHouses = houses.filter((h) => h.houseType !== "OUT_OF_HOME");
+  const outOfHomeHouses = houses.filter((h) => h.houseType === "OUT_OF_HOME");
 
   // Calculate stats
   const totalClients = houses.reduce((acc, h) => acc + h._count.clients, 0);
@@ -101,6 +155,10 @@ export default async function HousesPage() {
     );
     return acc + clientOverdue + employeeOverdue;
   }, 0);
+
+  // Separate out of home clients by service level
+  const basicClients = outOfHomeClients.filter((c) => c.serviceLevel === "BASIC");
+  const intensiveClients = outOfHomeClients.filter((c) => c.serviceLevel === "INTENSIVE");
 
   return (
     <div className="space-y-6">
@@ -249,6 +307,170 @@ export default async function HousesPage() {
                 <Button className="mt-4">Add Your First House</Button>
               </Link>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Out of Home Services Section */}
+      {outOfHomeClients.length > 0 && (
+        <Card className="mt-8">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-purple-600" />
+              <CardTitle>Out of Home Services</CardTitle>
+            </div>
+            <p className="text-sm text-slate-500">
+              Clients receiving ICS, IHS, or other out-of-home services
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Basic Services */}
+              {basicClients.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className="bg-blue-100 text-blue-800">Basic (245D)</Badge>
+                    <span className="text-sm text-slate-500">{basicClients.length} clients</span>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Client</TableHead>
+                        <TableHead>Services</TableHead>
+                        <TableHead>Assigned House</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {basicClients.map((client) => (
+                        <TableRow key={client.id}>
+                          <TableCell>
+                            <Link
+                              href={`/dashboard/clients/${client.id}`}
+                              className="font-medium text-blue-600 hover:underline"
+                            >
+                              {client.firstName} {client.lastName}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {parseServiceTypes(client.serviceTypes).map((type) => (
+                                <Badge key={type} variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                  {SERVICE_TYPE_LABELS[type] || type}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Building className="h-4 w-4 text-slate-400" />
+                              {client.house.name}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Intensive Services */}
+              {intensiveClients.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className="bg-purple-100 text-purple-800">Intensive</Badge>
+                    <span className="text-sm text-slate-500">{intensiveClients.length} clients</span>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Client</TableHead>
+                        <TableHead>Services</TableHead>
+                        <TableHead>Assigned House</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {intensiveClients.map((client) => (
+                        <TableRow key={client.id}>
+                          <TableCell>
+                            <Link
+                              href={`/dashboard/clients/${client.id}`}
+                              className="font-medium text-blue-600 hover:underline"
+                            >
+                              {client.firstName} {client.lastName}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {parseServiceTypes(client.serviceTypes).map((type) => (
+                                <Badge key={type} variant="outline" className="text-xs bg-purple-50 text-purple-700">
+                                  {SERVICE_TYPE_LABELS[type] || type}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Building className="h-4 w-4 text-slate-400" />
+                              {client.house.name}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Clients without service level set */}
+              {outOfHomeClients.filter(c => !c.serviceLevel).length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge variant="outline">Unclassified</Badge>
+                    <span className="text-sm text-slate-500">
+                      {outOfHomeClients.filter(c => !c.serviceLevel).length} clients
+                    </span>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Client</TableHead>
+                        <TableHead>Services</TableHead>
+                        <TableHead>Assigned House</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {outOfHomeClients.filter(c => !c.serviceLevel).map((client) => (
+                        <TableRow key={client.id}>
+                          <TableCell>
+                            <Link
+                              href={`/dashboard/clients/${client.id}`}
+                              className="font-medium text-blue-600 hover:underline"
+                            >
+                              {client.firstName} {client.lastName}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {parseServiceTypes(client.serviceTypes).map((type) => (
+                                <Badge key={type} variant="outline" className="text-xs">
+                                  {SERVICE_TYPE_LABELS[type] || type}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Building className="h-4 w-4 text-slate-400" />
+                              {client.house.name}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

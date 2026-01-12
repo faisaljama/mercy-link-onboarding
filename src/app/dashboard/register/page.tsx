@@ -1,31 +1,22 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, getUserHouseIds } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   UserPlus,
   UserMinus,
   ArrowRightLeft,
-  Calendar,
-  Home,
   FileText,
-  Plus,
+  AlertCircle,
 } from "lucide-react";
-import Link from "next/link";
-import { format } from "date-fns";
+import { subMonths } from "date-fns";
 import { AddEntryDialog } from "./add-entry-dialog";
+import { RegisterTable } from "./register-tables";
+import { PrintRegisterButton } from "./print-register";
 
 async function getRegisterData(houseIds: string[]) {
-  const entries = await prisma.admissionDischarge.findMany({
+  // Get all entries for stats
+  const allEntries = await prisma.admissionDischarge.findMany({
     where: {
       client: {
         houseId: { in: houseIds },
@@ -38,8 +29,30 @@ async function getRegisterData(houseIds: string[]) {
         },
       },
     },
-    orderBy: { date: "desc" },
+    orderBy: { date: "asc" }, // Chronological order - earliest first
   });
+
+  // Six months ago for discharge filtering
+  const sixMonthsAgo = subMonths(new Date(), 6);
+
+  // Separate admissions and discharges
+  // Admissions include: ADMISSION, TRANSFER_IN
+  const admissions = allEntries.filter(
+    (e) => e.type === "ADMISSION" || e.type === "TRANSFER_IN"
+  );
+
+  // Discharges include: DISCHARGE, TRANSFER_OUT
+  // Only show discharges from the last 6 months (245D requirement)
+  const discharges = allEntries.filter(
+    (e) =>
+      (e.type === "DISCHARGE" || e.type === "TRANSFER_OUT") &&
+      new Date(e.date) >= sixMonthsAgo
+  );
+
+  // All-time discharges for stats
+  const allDischarges = allEntries.filter(
+    (e) => e.type === "DISCHARGE" || e.type === "TRANSFER_OUT"
+  );
 
   const clients = await prisma.client.findMany({
     where: {
@@ -58,54 +71,7 @@ async function getRegisterData(houseIds: string[]) {
     orderBy: { name: "asc" },
   });
 
-  return { entries, clients, houses };
-}
-
-function getTypeIcon(type: string) {
-  switch (type) {
-    case "ADMISSION":
-      return <UserPlus className="h-4 w-4 text-green-600" />;
-    case "DISCHARGE":
-      return <UserMinus className="h-4 w-4 text-red-600" />;
-    case "TRANSFER_IN":
-      return <ArrowRightLeft className="h-4 w-4 text-blue-600" />;
-    case "TRANSFER_OUT":
-      return <ArrowRightLeft className="h-4 w-4 text-orange-600" />;
-    default:
-      return <FileText className="h-4 w-4 text-slate-600" />;
-  }
-}
-
-function getTypeBadge(type: string) {
-  switch (type) {
-    case "ADMISSION":
-      return <Badge className="bg-green-100 text-green-800">Admission</Badge>;
-    case "DISCHARGE":
-      return <Badge className="bg-red-100 text-red-800">Discharge</Badge>;
-    case "TRANSFER_IN":
-      return <Badge className="bg-blue-100 text-blue-800">Transfer In</Badge>;
-    case "TRANSFER_OUT":
-      return <Badge className="bg-orange-100 text-orange-800">Transfer Out</Badge>;
-    default:
-      return <Badge variant="outline">{type}</Badge>;
-  }
-}
-
-function getDischargeTypeBadge(type: string | null) {
-  if (!type) return null;
-
-  switch (type) {
-    case "PLANNED":
-      return <Badge variant="outline" className="text-xs">Planned</Badge>;
-    case "UNPLANNED":
-      return <Badge variant="outline" className="text-xs text-orange-600">Unplanned</Badge>;
-    case "EMERGENCY":
-      return <Badge variant="outline" className="text-xs text-red-600">Emergency</Badge>;
-    case "DEATH":
-      return <Badge variant="outline" className="text-xs text-slate-600">Death</Badge>;
-    default:
-      return <Badge variant="outline" className="text-xs">{type}</Badge>;
-  }
+  return { admissions, discharges, allDischarges, clients, houses };
 }
 
 export default async function AdmissionDischargeRegisterPage() {
@@ -113,20 +79,20 @@ export default async function AdmissionDischargeRegisterPage() {
   if (!session) return null;
 
   const houseIds = await getUserHouseIds(session.id);
-  const { entries, clients, houses } = await getRegisterData(houseIds);
+  const { admissions, discharges, allDischarges, clients, houses } = await getRegisterData(houseIds);
 
   // Stats
   const thisMonth = new Date();
   thisMonth.setDate(1);
   thisMonth.setHours(0, 0, 0, 0);
 
-  const admissionsThisMonth = entries.filter(
+  const admissionsThisMonth = admissions.filter(
     (e) => e.type === "ADMISSION" && new Date(e.date) >= thisMonth
   ).length;
-  const dischargesThisMonth = entries.filter(
+  const dischargesThisMonth = allDischarges.filter(
     (e) => e.type === "DISCHARGE" && new Date(e.date) >= thisMonth
   ).length;
-  const transfersThisMonth = entries.filter(
+  const transfersThisMonth = [...admissions, ...allDischarges].filter(
     (e) => (e.type === "TRANSFER_IN" || e.type === "TRANSFER_OUT") && new Date(e.date) >= thisMonth
   ).length;
 
@@ -139,7 +105,10 @@ export default async function AdmissionDischargeRegisterPage() {
             Track all client admissions, discharges, and transfers per 245D requirements
           </p>
         </div>
-        <AddEntryDialog clients={clients} houses={houses} />
+        <div className="flex gap-2">
+          <PrintRegisterButton admissions={admissions} discharges={discharges} />
+          <AddEntryDialog clients={clients} houses={houses} />
+        </div>
       </div>
 
       {/* Stats */}
@@ -148,10 +117,10 @@ export default async function AdmissionDischargeRegisterPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Total Entries</p>
-                <p className="text-2xl font-bold">{entries.length}</p>
+                <p className="text-sm text-slate-500">Total Admissions</p>
+                <p className="text-2xl font-bold">{admissions.filter(e => e.type === "ADMISSION").length}</p>
               </div>
-              <FileText className="h-8 w-8 text-slate-200" />
+              <UserPlus className="h-8 w-8 text-green-200" />
             </div>
           </CardContent>
         </Card>
@@ -190,94 +159,49 @@ export default async function AdmissionDischargeRegisterPage() {
         </Card>
       </div>
 
-      {/* Register Table */}
+      {/* Admission Register */}
       <Card>
         <CardHeader>
-          <CardTitle>Register Entries</CardTitle>
+          <div className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-green-600" />
+            <CardTitle>Admission Register</CardTitle>
+          </div>
           <CardDescription>
-            Complete log of all admission and discharge events
+            All client admissions and transfers in, sorted chronologically (earliest to latest)
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {entries.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-              <p>No register entries yet</p>
-              <p className="text-sm">Add an entry to start tracking admissions and discharges</p>
+          <RegisterTable entries={admissions} />
+        </CardContent>
+      </Card>
+
+      {/* Discharge Register */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <UserMinus className="h-5 w-5 text-red-600" />
+              <div>
+                <CardTitle>Discharge Register</CardTitle>
+                <CardDescription>
+                  Client discharges and transfers out from the last 6 months (per 245D requirements)
+                </CardDescription>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-amber-600 border-amber-300">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              6-Month Retention
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {discharges.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <FileText className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+              <p>No discharges in the last 6 months</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>House</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {entries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-slate-400" />
-                        {format(new Date(entry.date), "MMM d, yyyy")}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getTypeIcon(entry.type)}
-                        {getTypeBadge(entry.type)}
-                        {entry.dischargeType && getDischargeTypeBadge(entry.dischargeType)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        href={`/dashboard/clients/${entry.client.id}`}
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {entry.client.firstName} {entry.client.lastName}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Home className="h-4 w-4 text-slate-400" />
-                        {entry.client.house.name}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-slate-600">
-                        {entry.type === "ADMISSION" && entry.fromLocation && (
-                          <span>From: {entry.fromLocation}</span>
-                        )}
-                        {entry.type === "DISCHARGE" && entry.toLocation && (
-                          <span>To: {entry.toLocation}</span>
-                        )}
-                        {(entry.type === "TRANSFER_IN" || entry.type === "TRANSFER_OUT") && (
-                          <>
-                            {entry.fromLocation && <span>From: {entry.fromLocation}</span>}
-                            {entry.fromLocation && entry.toLocation && <span> → </span>}
-                            {entry.toLocation && <span>To: {entry.toLocation}</span>}
-                          </>
-                        )}
-                        {entry.reason && (
-                          <div className="text-xs text-slate-500 mt-1">
-                            Reason: {entry.reason}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-slate-500 max-w-[200px] truncate block">
-                        {entry.notes || "—"}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <RegisterTable entries={discharges} />
           )}
         </CardContent>
       </Card>

@@ -33,11 +33,14 @@ import {
   Plus,
   CheckCircle2,
   Clock,
-  Printer,
+  FileDown,
   Building2,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { downloadPDF } from "@/lib/pdf-service";
+import { RentCollectionPDF, getRentCollectionFilename } from "@/lib/pdf-templates/rent-collection-pdf";
 
 interface House {
   id: string;
@@ -100,6 +103,7 @@ export default function RentCollectionPage() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   // Form state for new payment
   const [formData, setFormData] = useState({
@@ -210,8 +214,27 @@ export default function RentCollectionPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    setGeneratingPDF(true);
+    try {
+      const houseName = selectedHouse !== "all"
+        ? houses.find(h => h.id === selectedHouse)?.name
+        : undefined;
+      const filename = getRentCollectionFilename(selectedMonth, selectedYear);
+      await downloadPDF(
+        <RentCollectionPDF
+          payments={rentPayments}
+          month={selectedMonth}
+          year={selectedYear}
+          houseName={houseName}
+        />,
+        filename
+      );
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    } finally {
+      setGeneratingPDF(false);
+    }
   };
 
   // Calculate totals
@@ -241,9 +264,18 @@ export default function RentCollectionPage() {
           <p className="text-slate-600">Track and manage resident rent payments</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" />
-            Print
+          <Button variant="outline" onClick={handleDownloadPDF} disabled={generatingPDF}>
+            {generatingPDF ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileDown className="mr-2 h-4 w-4" />
+                Download PDF
+              </>
+            )}
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -583,26 +615,6 @@ export default function RentCollectionPage() {
         </CardContent>
       </Card>
 
-      {/* Print Styles */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .space-y-6, .space-y-6 * {
-            visibility: visible;
-          }
-          .space-y-6 {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          button, .print\\:hidden {
-            display: none !important;
-          }
-        }
-      `}</style>
-    </div>
+      </div>
   );
 }

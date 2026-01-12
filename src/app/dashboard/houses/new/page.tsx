@@ -34,6 +34,23 @@ export default function NewHousePage() {
     setLoading(true);
     setError("");
 
+    // Validate required fields
+    if (!formData.name.trim()) {
+      setError("House name is required");
+      setLoading(false);
+      return;
+    }
+    if (!formData.address.trim()) {
+      setError("Address is required");
+      setLoading(false);
+      return;
+    }
+    if (!formData.county) {
+      setError("Please select a county");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/houses", {
         method: "POST",
@@ -44,14 +61,21 @@ export default function NewHousePage() {
         }),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create house");
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server error (${res.status}): Unable to parse response`);
       }
 
-      const { house } = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to create house (${res.status})`);
+      }
+
+      const { house } = data;
       router.push(`/dashboard/houses/${house.id}`);
     } catch (err) {
+      console.error("House creation error:", err);
       setError(err instanceof Error ? err.message : "Failed to create house");
     } finally {
       setLoading(false);

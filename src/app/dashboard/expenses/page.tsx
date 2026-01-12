@@ -33,13 +33,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Receipt,
   Plus,
-  Printer,
+  FileDown,
   Building2,
   Upload,
   Trash2,
   Image,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { downloadPDF } from "@/lib/pdf-service";
+import { ExpensesPDF, getExpensesFilename } from "@/lib/pdf-templates/expenses-pdf";
 
 interface House {
   id: string;
@@ -102,6 +105,7 @@ export default function ExpensesPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -167,16 +171,16 @@ export default function ExpensesPage() {
     try {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
-      formDataUpload.append("isReceipt", "true");
+      formDataUpload.append("type", "document");
 
-      const res = await fetch("/api/documents/upload", {
+      const res = await fetch("/api/upload", {
         method: "POST",
         body: formDataUpload,
       });
 
       if (res.ok) {
         const data = await res.json();
-        setFormData({ ...formData, receiptUrl: data.document.filePath });
+        setFormData({ ...formData, receiptUrl: data.url });
       } else {
         alert("Failed to upload receipt");
       }
@@ -238,8 +242,27 @@ export default function ExpensesPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    setGeneratingPDF(true);
+    try {
+      const houseName = selectedHouse !== "all"
+        ? houses.find(h => h.id === selectedHouse)?.name
+        : undefined;
+      const filename = getExpensesFilename(selectedMonth, selectedYear);
+      await downloadPDF(
+        <ExpensesPDF
+          expenses={expenses}
+          month={selectedMonth}
+          year={selectedYear}
+          houseName={houseName}
+        />,
+        filename
+      );
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    } finally {
+      setGeneratingPDF(false);
+    }
   };
 
   // Calculate totals by category
@@ -265,9 +288,18 @@ export default function ExpensesPage() {
           <p className="text-slate-600">Track purchases and receipts by house</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" />
-            Print
+          <Button variant="outline" onClick={handleDownloadPDF} disabled={generatingPDF}>
+            {generatingPDF ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileDown className="mr-2 h-4 w-4" />
+                Download PDF
+              </>
+            )}
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -661,26 +693,6 @@ export default function ExpensesPage() {
         </CardContent>
       </Card>
 
-      {/* Print Styles */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .space-y-6, .space-y-6 * {
-            visibility: visible;
-          }
-          .space-y-6 {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          button, .print\\:hidden {
-            display: none !important;
-          }
-        }
-      `}</style>
-    </div>
+      </div>
   );
 }
