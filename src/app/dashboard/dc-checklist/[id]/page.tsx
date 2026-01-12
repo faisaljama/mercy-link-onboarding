@@ -36,5 +36,17 @@ export default async function ChecklistDetailPage({
     notFound();
   }
 
-  return <ChecklistForm checklist={checklist} />;
+  // Determine edit/delete permissions
+  const isAdmin = session.role === "ADMIN" || session.role === "HR";
+  const isOwner = checklist.createdById === session.id;
+  const canEdit = isAdmin || isOwner;
+  const canDelete = isAdmin || isOwner;
+
+  return (
+    <ChecklistForm
+      checklist={checklist}
+      canEdit={canEdit}
+      canDelete={canDelete}
+    />
+  );
 }

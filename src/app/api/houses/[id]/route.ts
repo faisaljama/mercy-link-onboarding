@@ -75,7 +75,7 @@ export async function PUT(
     }
 
     const data = await request.json();
-    const { name, address, county, licenseNumber, capacity } = data;
+    const { name, address, county, licenseNumber, capacity, eveningEndsMidnight } = data;
 
     // Validate required fields
     if (!name || !address || !county) {
@@ -94,6 +94,7 @@ export async function PUT(
         county,
         licenseNumber: licenseNumber || null,
         capacity: capacity || 4,
+        eveningEndsMidnight: typeof eveningEndsMidnight === "boolean" ? eveningEndsMidnight : undefined,
       },
     });
 

@@ -13,8 +13,10 @@ import {
   CheckCircle2,
   RefreshCw,
   Trash2,
+  Settings,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
+import { NotificationPreferences } from "@/components/notification-preferences";
 
 interface Notification {
   id: string;
@@ -197,6 +199,9 @@ export default function NotificationsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Notification Preferences */}
+      <NotificationPreferences />
 
       {/* Notifications List */}
       <Card>

@@ -21,6 +21,7 @@ import {
   ClipboardCheck,
   Wrench,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -80,6 +81,7 @@ interface Checklist {
   onsiteAfterVisitSummaries: boolean;
   onsiteOutcomeTracker: boolean;
   onsiteFireDrillBinder: boolean;
+  onsiteGenoaDeliveryBinder: boolean;
   onsiteCommonAreasCleaned: boolean;
   onsiteFoodLabeled: boolean;
   onsiteSuppliesStocked: boolean;
@@ -90,7 +92,9 @@ interface Checklist {
   onsiteWaterSoftener: boolean;
   onsiteFurnaceFilter: boolean;
   onsiteExteriorChecked: boolean;
+  onsiteSnowRemoval: boolean;
   onsiteStaffCoaching: boolean;
+  onsiteMailVoicemail: boolean;
 }
 
 const REMOTE_TASKS = [
@@ -113,14 +117,14 @@ const REMOTE_TASKS = [
 
 const ONSITE_TASKS_ARRIVAL = [
   { key: "onsiteClockedIn", label: "Clocked in at house location" },
-  { key: "onsiteHandoffReviewed", label: "Reviewed written handoff notes" },
+  { key: "onsiteHandoffReviewed", label: "Reviewed rtasks progress notes for the day" },
   { key: "onsiteVerbalHandoff", label: "Received verbal handoff from staff" },
 ];
 
 const ONSITE_TASKS_MEDS = [
   { key: "onsiteNarcoticCount", label: "Completed narcotic count with staff" },
-  { key: "onsitePettyCashCount", label: "Verified petty cash count" },
-  { key: "onsiteMedQuantitiesReviewed", label: "Reviewed medication quantities" },
+  { key: "onsitePettyCashCount", label: "House card in receipt binder" },
+  { key: "onsiteMedQuantitiesReviewed", label: "Verify Genoa scheduled medication dates match current dates" },
   { key: "onsitePrnMedsChecked", label: "Checked PRN medications supply" },
   { key: "onsiteOverflowBinsChecked", label: "Checked medication overflow bins" },
   { key: "onsitePharmacyDeliveryReviewed", label: "Reviewed pharmacy delivery/orders" },
@@ -131,6 +135,7 @@ const ONSITE_TASKS_MEDS = [
 const ONSITE_TASKS_STAFF = [
   { key: "onsiteStaffInteractions", label: "Observed staff-resident interactions" },
   { key: "onsiteStaffCoaching", label: "Provided staff coaching/feedback" },
+  { key: "onsiteMailVoicemail", label: "Check mail and listen to voicemails" },
 ];
 
 const ONSITE_TASKS_RESIDENTS = [
@@ -144,8 +149,9 @@ const ONSITE_TASKS_DOCUMENTATION = [
   { key: "onsiteReceiptBinderReviewed", label: "Reviewed receipt binder" },
   { key: "onsiteResidentBindersReviewed", label: "Reviewed resident binders" },
   { key: "onsiteAfterVisitSummaries", label: "Checked after visit summaries" },
-  { key: "onsiteOutcomeTracker", label: "Reviewed outcome tracker" },
+  { key: "onsiteOutcomeTracker", label: "Check outcome tracker via rtasks" },
   { key: "onsiteFireDrillBinder", label: "Checked fire drill binder" },
+  { key: "onsiteGenoaDeliveryBinder", label: "Reviewed Genoa pharmacy delivery binder" },
 ];
 
 const ONSITE_TASKS_FACILITY = [
@@ -159,11 +165,19 @@ const ONSITE_TASKS_FACILITY = [
   { key: "onsiteWaterSoftener", label: "Water softener checked" },
   { key: "onsiteFurnaceFilter", label: "Furnace filter status checked" },
   { key: "onsiteExteriorChecked", label: "Exterior of house checked" },
+  { key: "onsiteSnowRemoval", label: "Shovel snow and salt driveway, front door and patio" },
 ];
 
-export function ChecklistForm({ checklist }: { checklist: Checklist }) {
+interface ChecklistFormProps {
+  checklist: Checklist;
+  canEdit?: boolean;
+  canDelete?: boolean;
+}
+
+export function ChecklistForm({ checklist, canEdit = true, canDelete = false }: ChecklistFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState(checklist);
 
   const handleCheckboxChange = (key: string, checked: boolean) => {
@@ -190,7 +204,8 @@ export function ChecklistForm({ checklist }: { checklist: Checklist }) {
       });
 
       if (!response.ok) {
-        alert("Failed to save checklist");
+        const data = await response.json();
+        alert(data.error || "Failed to save checklist");
         return;
       }
 
@@ -200,6 +215,32 @@ export function ChecklistForm({ checklist }: { checklist: Checklist }) {
       alert("Failed to save checklist");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this checklist? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/dc-checklist/${checklist.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.error || "Failed to delete checklist");
+        return;
+      }
+
+      router.push("/dashboard/dc-checklist");
+      router.refresh();
+    } catch {
+      alert("Failed to delete checklist");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -268,10 +309,25 @@ export function ChecklistForm({ checklist }: { checklist: Checklist }) {
             </div>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={loading}>
-          <Save className="h-4 w-4 mr-2" />
-          {loading ? "Saving..." : "Save Checklist"}
-        </Button>
+        <div className="flex gap-2">
+          {canDelete && (
+            <Button
+              variant="outline"
+              onClick={handleDelete}
+              disabled={deleting || loading}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          )}
+          {canEdit && (
+            <Button onClick={handleSave} disabled={loading || deleting}>
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? "Saving..." : "Save Checklist"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {checklist.visitType === "REMOTE" ? (
@@ -395,11 +451,25 @@ export function ChecklistForm({ checklist }: { checklist: Checklist }) {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={loading} size="lg">
-          <Save className="h-4 w-4 mr-2" />
-          {loading ? "Saving..." : "Save Checklist"}
-        </Button>
+      <div className="flex justify-end gap-2">
+        {canDelete && (
+          <Button
+            variant="outline"
+            onClick={handleDelete}
+            disabled={deleting || loading}
+            size="lg"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {deleting ? "Deleting..." : "Delete Checklist"}
+          </Button>
+        )}
+        {canEdit && (
+          <Button onClick={handleSave} disabled={loading || deleting} size="lg">
+            <Save className="h-4 w-4 mr-2" />
+            {loading ? "Saving..." : "Save Checklist"}
+          </Button>
+        )}
       </div>
     </div>
   );

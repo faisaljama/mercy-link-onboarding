@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PDFDownloadButton } from "@/components/pdf-download-button";
 import {
   Home,
   Users,
@@ -140,11 +141,17 @@ export default async function HouseDetailPage({
             </div>
           </div>
         </div>
-        {session.role === "ADMIN" && (
-          <Link href={`/dashboard/houses/${house.id}/edit`}>
-            <Button variant="outline">Edit House</Button>
-          </Link>
-        )}
+        <div className="flex gap-2">
+          <PDFDownloadButton
+            endpoint={`/api/reports/house-compliance?houseId=${house.id}`}
+            label="Compliance Report"
+          />
+          {session.role === "ADMIN" && (
+            <Link href={`/dashboard/houses/${house.id}/edit`}>
+              <Button variant="outline">Edit House</Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Stats */}

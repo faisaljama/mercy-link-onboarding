@@ -43,6 +43,7 @@ import {
   Edit,
   Users,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { DailyOperationsPDFButton } from "@/components/daily-operations-pdf-button";
@@ -98,6 +99,12 @@ interface CalendarEvent {
   client: { id: string; firstName: string; lastName: string } | null;
 }
 
+interface StaffEntry {
+  name: string;
+  shiftStart: string;
+  shiftEnd: string;
+}
+
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -138,9 +145,7 @@ export default function DailyOperationsPage() {
   const [editFormData, setEditFormData] = useState({
     censusCount: 0,
     censusNotes: "",
-    shiftStart: "",
-    shiftEnd: "",
-    staffOnDuty: "",
+    staffEntries: [{ name: "", shiftStart: "", shiftEnd: "" }] as StaffEntry[],
     medicationNotes: "",
     mealNotes: "",
     activitiesNotes: "",
@@ -200,13 +205,29 @@ export default function DailyOperationsPage() {
         clients: data.clients || [],
         employees: data.employees || [],
       });
+      // Parse staff entries from JSON or create default
+      let staffEntries: StaffEntry[] = [{ name: "", shiftStart: "", shiftEnd: "" }];
+      if (data.report.staffOnDuty) {
+        try {
+          const parsed = JSON.parse(data.report.staffOnDuty);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            staffEntries = parsed;
+          }
+        } catch {
+          // If not valid JSON, treat as a single staff name (legacy data)
+          staffEntries = [{
+            name: data.report.staffOnDuty,
+            shiftStart: data.report.shiftStart ? format(new Date(data.report.shiftStart), "HH:mm") : "",
+            shiftEnd: data.report.shiftEnd ? format(new Date(data.report.shiftEnd), "HH:mm") : "",
+          }];
+        }
+      }
+
       // Initialize edit form with current values
       setEditFormData({
         censusCount: data.report.censusCount || 0,
         censusNotes: data.report.censusNotes || "",
-        shiftStart: data.report.shiftStart ? format(new Date(data.report.shiftStart), "HH:mm") : "",
-        shiftEnd: data.report.shiftEnd ? format(new Date(data.report.shiftEnd), "HH:mm") : "",
-        staffOnDuty: data.report.staffOnDuty || "",
+        staffEntries,
         medicationNotes: data.report.medicationNotes || "",
         mealNotes: data.report.mealNotes || "",
         activitiesNotes: data.report.activitiesNotes || "",
@@ -252,18 +273,27 @@ export default function DailyOperationsPage() {
     if (!selectedReport) return;
     setSubmitting(true);
 
-    // Build datetime from date and time
+    // Filter out empty staff entries and save as JSON
+    const validStaffEntries = editFormData.staffEntries.filter(
+      (s) => s.name.trim() !== ""
+    );
+    const staffOnDuty = validStaffEntries.length > 0
+      ? JSON.stringify(validStaffEntries)
+      : null;
+
+    // Use first staff's shift times for backward compatibility
     const reportDate = new Date(selectedReport.date);
-    const shiftStart = editFormData.shiftStart
-      ? new Date(reportDate.setHours(
-          parseInt(editFormData.shiftStart.split(":")[0]),
-          parseInt(editFormData.shiftStart.split(":")[1])
+    const firstStaff = validStaffEntries[0];
+    const shiftStart = firstStaff?.shiftStart
+      ? new Date(new Date(reportDate).setHours(
+          parseInt(firstStaff.shiftStart.split(":")[0]),
+          parseInt(firstStaff.shiftStart.split(":")[1])
         ))
       : null;
-    const shiftEnd = editFormData.shiftEnd
-      ? new Date(reportDate.setHours(
-          parseInt(editFormData.shiftEnd.split(":")[0]),
-          parseInt(editFormData.shiftEnd.split(":")[1])
+    const shiftEnd = firstStaff?.shiftEnd
+      ? new Date(new Date(reportDate).setHours(
+          parseInt(firstStaff.shiftEnd.split(":")[0]),
+          parseInt(firstStaff.shiftEnd.split(":")[1])
         ))
       : null;
 
@@ -271,9 +301,17 @@ export default function DailyOperationsPage() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...editFormData,
+        censusCount: editFormData.censusCount,
+        censusNotes: editFormData.censusNotes,
+        staffOnDuty,
         shiftStart: shiftStart?.toISOString(),
         shiftEnd: shiftEnd?.toISOString(),
+        medicationNotes: editFormData.medicationNotes,
+        mealNotes: editFormData.mealNotes,
+        activitiesNotes: editFormData.activitiesNotes,
+        incidentNotes: editFormData.incidentNotes,
+        maintenanceNotes: editFormData.maintenanceNotes,
+        generalNotes: editFormData.generalNotes,
       }),
     });
 
@@ -339,6 +377,28 @@ export default function DailyOperationsPage() {
 
   const years = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
   const canReview = userRole === "ADMIN" || userRole === "DESIGNATED_COORDINATOR";
+
+  // Staff entry helpers
+  const addStaffEntry = () => {
+    setEditFormData({
+      ...editFormData,
+      staffEntries: [...editFormData.staffEntries, { name: "", shiftStart: "", shiftEnd: "" }],
+    });
+  };
+
+  const removeStaffEntry = (index: number) => {
+    if (editFormData.staffEntries.length === 1) return; // Keep at least one row
+    setEditFormData({
+      ...editFormData,
+      staffEntries: editFormData.staffEntries.filter((_, i) => i !== index),
+    });
+  };
+
+  const updateStaffEntry = (index: number, field: keyof StaffEntry, value: string) => {
+    const updated = [...editFormData.staffEntries];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditFormData({ ...editFormData, staffEntries: updated });
+  };
 
   return (
     <div className="space-y-6">
@@ -659,37 +719,68 @@ export default function DailyOperationsPage() {
 
               <Separator />
 
-              {/* Shift Info */}
+              {/* Staff On Duty */}
               <div>
-                <h3 className="font-semibold mb-3">Shift Information</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Shift Start</Label>
-                    <Input
-                      type="time"
-                      value={editFormData.shiftStart}
-                      onChange={(e) => setEditFormData({ ...editFormData, shiftStart: e.target.value })}
-                      disabled={selectedReport.status !== "DRAFT"}
-                    />
-                  </div>
-                  <div>
-                    <Label>Shift End</Label>
-                    <Input
-                      type="time"
-                      value={editFormData.shiftEnd}
-                      onChange={(e) => setEditFormData({ ...editFormData, shiftEnd: e.target.value })}
-                      disabled={selectedReport.status !== "DRAFT"}
-                    />
-                  </div>
-                  <div className="col-span-2 md:col-span-1">
-                    <Label>Staff On Duty</Label>
-                    <Input
-                      value={editFormData.staffOnDuty}
-                      onChange={(e) => setEditFormData({ ...editFormData, staffOnDuty: e.target.value })}
-                      placeholder="Enter staff names"
-                      disabled={selectedReport.status !== "DRAFT"}
-                    />
-                  </div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Staff On Duty
+                  </h3>
+                  {selectedReport.status === "DRAFT" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addStaffEntry}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Staff
+                    </Button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  {editFormData.staffEntries.map((staff, index) => (
+                    <div key={index} className="flex items-end gap-3 p-3 bg-slate-50 rounded-lg">
+                      <div className="flex-1">
+                        <Label className="text-xs">Staff Name</Label>
+                        <Input
+                          value={staff.name}
+                          onChange={(e) => updateStaffEntry(index, "name", e.target.value)}
+                          placeholder="Enter staff name"
+                          disabled={selectedReport.status !== "DRAFT"}
+                        />
+                      </div>
+                      <div className="w-32">
+                        <Label className="text-xs">Shift Start</Label>
+                        <Input
+                          type="time"
+                          value={staff.shiftStart}
+                          onChange={(e) => updateStaffEntry(index, "shiftStart", e.target.value)}
+                          disabled={selectedReport.status !== "DRAFT"}
+                        />
+                      </div>
+                      <div className="w-32">
+                        <Label className="text-xs">Shift End</Label>
+                        <Input
+                          type="time"
+                          value={staff.shiftEnd}
+                          onChange={(e) => updateStaffEntry(index, "shiftEnd", e.target.value)}
+                          disabled={selectedReport.status !== "DRAFT"}
+                        />
+                      </div>
+                      {selectedReport.status === "DRAFT" && editFormData.staffEntries.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeStaffEntry(index)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-9"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 

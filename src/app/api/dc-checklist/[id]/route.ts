@@ -60,6 +60,17 @@ export async function PUT(
     return NextResponse.json({ error: "Checklist not found" }, { status: 404 });
   }
 
+  // Permission check: Admin/HR can edit any, others can only edit their own
+  const isAdmin = session.role === "ADMIN" || session.role === "HR";
+  const isOwner = existing.createdById === session.id;
+
+  if (!isAdmin && !isOwner) {
+    return NextResponse.json(
+      { error: "You can only edit your own checklists" },
+      { status: 403 }
+    );
+  }
+
   const checklist = await prisma.dCDailyChecklist.update({
     where: { id },
     data: {
@@ -102,6 +113,7 @@ export async function PUT(
       onsiteAfterVisitSummaries: data.onsiteAfterVisitSummaries,
       onsiteOutcomeTracker: data.onsiteOutcomeTracker,
       onsiteFireDrillBinder: data.onsiteFireDrillBinder,
+      onsiteGenoaDeliveryBinder: data.onsiteGenoaDeliveryBinder,
       onsiteCommonAreasCleaned: data.onsiteCommonAreasCleaned,
       onsiteFoodLabeled: data.onsiteFoodLabeled,
       onsiteSuppliesStocked: data.onsiteSuppliesStocked,
@@ -112,7 +124,9 @@ export async function PUT(
       onsiteWaterSoftener: data.onsiteWaterSoftener,
       onsiteFurnaceFilter: data.onsiteFurnaceFilter,
       onsiteExteriorChecked: data.onsiteExteriorChecked,
+      onsiteSnowRemoval: data.onsiteSnowRemoval,
       onsiteStaffCoaching: data.onsiteStaffCoaching,
+      onsiteMailVoicemail: data.onsiteMailVoicemail,
       notes: data.notes,
       followUpItems: data.followUpItems,
       issuesIdentified: data.issuesIdentified,
@@ -150,6 +164,17 @@ export async function DELETE(
 
   if (!existing) {
     return NextResponse.json({ error: "Checklist not found" }, { status: 404 });
+  }
+
+  // Permission check: Admin/HR can delete any, others can only delete their own
+  const isAdmin = session.role === "ADMIN" || session.role === "HR";
+  const isOwner = existing.createdById === session.id;
+
+  if (!isAdmin && !isOwner) {
+    return NextResponse.json(
+      { error: "You can only delete your own checklists" },
+      { status: 403 }
+    );
   }
 
   await prisma.dCDailyChecklist.delete({

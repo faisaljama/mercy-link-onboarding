@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { PDFDownloadButton } from "@/components/pdf-download-button";
 import {
   UserCog,
   Home,
@@ -18,11 +20,14 @@ import {
   AlertTriangle,
   ArrowLeft,
   Award,
+  Scale,
 } from "lucide-react";
 import Link from "next/link";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, subDays, addDays } from "date-fns";
 import { TrainingChecklist } from "./training-checklist";
 import { EmployeeDocuments } from "./employee-documents";
+import { EmployeeDiscipline } from "./employee-discipline";
+import { EmployeeTrainingLog } from "./employee-training-log";
 
 async function getEmployee(id: string, houseIds: string[]) {
   const employee = await prisma.employee.findFirst({
@@ -45,10 +50,60 @@ async function getEmployee(id: string, houseIds: string[]) {
         },
       },
       documents: true,
+      correctiveActions: {
+        include: {
+          violationCategory: true,
+          house: { select: { name: true } },
+          issuedBy: { select: { name: true } },
+          signatures: { select: { signerType: true, signedAt: true } },
+        },
+        orderBy: { violationDate: "desc" },
+      },
     },
   });
 
   return employee;
+}
+
+function calculateDisciplineStats(correctiveActions: {
+  violationDate: Date;
+  status: string;
+  pointsAssigned: number;
+  pointsAdjusted: number | null;
+}[]) {
+  const today = new Date();
+  const ninetyDaysAgo = subDays(today, 90);
+
+  // Separate rolling (active) and historical (expired) actions
+  const rollingActions = correctiveActions.filter(
+    (a) => a.status !== "VOIDED" && new Date(a.violationDate) >= ninetyDaysAgo
+  );
+  const expiredActions = correctiveActions.filter(
+    (a) => a.status !== "VOIDED" && new Date(a.violationDate) < ninetyDaysAgo
+  );
+  const voidedActions = correctiveActions.filter((a) => a.status === "VOIDED");
+
+  // Calculate current points (rolling 90-day)
+  const currentPoints = rollingActions.reduce((total, action) => {
+    return total + (action.pointsAdjusted ?? action.pointsAssigned);
+  }, 0);
+
+  // Determine discipline level
+  let disciplineLevel = "Good Standing";
+  if (currentPoints >= 18) disciplineLevel = "Termination Review";
+  else if (currentPoints >= 14) disciplineLevel = "Final Warning";
+  else if (currentPoints >= 10) disciplineLevel = "Written Warning";
+  else if (currentPoints >= 6) disciplineLevel = "Verbal Warning";
+  else if (currentPoints >= 1) disciplineLevel = "Coaching";
+
+  return {
+    currentPoints,
+    disciplineLevel,
+    rollingCount: rollingActions.length,
+    expiredCount: expiredActions.length,
+    voidedCount: voidedActions.length,
+    totalCount: correctiveActions.length,
+  };
 }
 
 function calculateTrainingHours(items: { status: string; itemType: string }[]) {
@@ -81,6 +136,9 @@ export default async function EmployeeDetailPage({
   const trainingHours = calculateTrainingHours(employee.complianceItems);
   const requiredHours = employee.experienceYears >= 5 ? 12 : 24;
 
+  // Discipline stats
+  const disciplineStats = calculateDisciplineStats(employee.correctiveActions);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -111,6 +169,10 @@ export default async function EmployeeDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
+          <PDFDownloadButton
+            endpoint={`/api/reports/employee-training?employeeId=${employee.id}`}
+            label="Training Transcript"
+          />
           <Link href={`/dashboard/employees/${employee.id}/edit`}>
             <Button variant="outline">Edit Employee</Button>
           </Link>
@@ -118,7 +180,7 @@ export default async function EmployeeDetailPage({
       </div>
 
       {/* Stats Row */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -174,6 +236,27 @@ export default async function EmployeeDetailPage({
               </div>
               <Calendar className="h-8 w-8 text-blue-200" />
             </div>
+          </CardContent>
+        </Card>
+        <Card className={disciplineStats.currentPoints >= 14 ? "border-red-300 bg-red-50" : disciplineStats.currentPoints >= 10 ? "border-orange-300 bg-orange-50" : ""}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Discipline Points</p>
+                <p className={`text-2xl font-bold ${
+                  disciplineStats.currentPoints >= 14 ? "text-red-600" :
+                  disciplineStats.currentPoints >= 10 ? "text-orange-600" :
+                  disciplineStats.currentPoints >= 6 ? "text-yellow-600" : ""
+                }`}>
+                  {disciplineStats.currentPoints}/18
+                </p>
+              </div>
+              <Scale className={`h-8 w-8 ${
+                disciplineStats.currentPoints >= 14 ? "text-red-300" :
+                disciplineStats.currentPoints >= 10 ? "text-orange-300" : "text-slate-200"
+              }`} />
+            </div>
+            <p className="text-xs text-slate-500 mt-1">{disciplineStats.disciplineLevel}</p>
           </CardContent>
         </Card>
       </div>
@@ -249,13 +332,27 @@ export default async function EmployeeDetailPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="training">
+            <Tabs defaultValue="training-logs">
               <TabsList>
-                <TabsTrigger value="training">Training</TabsTrigger>
+                <TabsTrigger value="training-logs">Training Logs</TabsTrigger>
+                <TabsTrigger value="training">Training Checklist</TabsTrigger>
                 <TabsTrigger value="documents">
                   Documents ({employee.documents.length})
                 </TabsTrigger>
+                <TabsTrigger value="discipline" className={disciplineStats.currentPoints >= 14 ? "text-red-600" : ""}>
+                  Discipline ({disciplineStats.rollingCount})
+                </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="training-logs" className="mt-4">
+                <EmployeeTrainingLog
+                  employeeId={employee.id}
+                  employeeName={`${employee.firstName} ${employee.lastName}`}
+                  hireDate={employee.hireDate}
+                  experienceYears={employee.experienceYears}
+                  canEdit={["ADMIN", "HR", "DESIGNATED_COORDINATOR", "DESIGNATED_MANAGER"].includes(session.role)}
+                />
+              </TabsContent>
 
               <TabsContent value="training" className="mt-4">
                 <Tabs defaultValue="all">
@@ -307,6 +404,14 @@ export default async function EmployeeDetailPage({
                     itemType: i.itemType,
                   }))}
                   canDelete={session.role !== "LEAD_STAFF"}
+                />
+              </TabsContent>
+
+              <TabsContent value="discipline" className="mt-4">
+                <EmployeeDiscipline
+                  employeeId={employee.id}
+                  correctiveActions={employee.correctiveActions}
+                  stats={disciplineStats}
                 />
               </TabsContent>
             </Tabs>

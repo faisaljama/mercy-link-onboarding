@@ -32,6 +32,13 @@ import {
   Pill,
   Flame,
   Sparkles,
+  History,
+  Scale,
+  UserCheck,
+  CheckSquare,
+  StickyNote,
+  IdCard,
+  FileSignature,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -72,7 +79,19 @@ const groupedNavigation: NavGroup[] = [
     items: [
       { name: "Clients", href: "/dashboard/clients", icon: Users },
       { name: "Employees", href: "/dashboard/employees", icon: UserCog },
+      { name: "Discipline", href: "/dashboard/discipline", icon: Scale },
       { name: "Register", href: "/dashboard/register", icon: ClipboardCheck },
+    ],
+  },
+  {
+    name: "DSP Portal",
+    icon: UserCheck,
+    items: [
+      { name: "My Dashboard", href: "/dsp", icon: LayoutDashboard },
+      { name: "Chores", href: "/dsp/chores", icon: CheckSquare },
+      { name: "Shift Notes", href: "/dsp/shift-notes", icon: StickyNote },
+      { name: "Resident Profiles", href: "/dsp/residents", icon: IdCard },
+      { name: "Documents", href: "/dsp/documents", icon: FileSignature },
     ],
   },
 ];
@@ -122,6 +141,7 @@ const bottomDirectNavigation: NavItem[] = [
 
 const adminNavigation: NavItem[] = [
   { name: "Organization", href: "/dashboard/organization", icon: Building2 },
+  { name: "Audit Log", href: "/dashboard/audit-log", icon: History },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 

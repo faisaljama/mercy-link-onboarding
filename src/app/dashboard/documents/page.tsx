@@ -25,6 +25,7 @@ import {
 import Link from "next/link";
 import { format } from "date-fns";
 import { DocumentFilters } from "./document-filters";
+import { BulkUploadSection } from "./bulk-upload-section";
 
 async function getDocuments(houseIds: string[], filters: { entityType?: string; search?: string }) {
   // Get accessible clients and employees
@@ -101,6 +102,22 @@ export default async function DocumentsPage({
     search: params.search,
   });
 
+  // Fetch clients and employees for bulk upload
+  const [clients, employees] = await Promise.all([
+    prisma.client.findMany({
+      where: { houseId: { in: houseIds } },
+      select: { id: true, firstName: true, lastName: true },
+      orderBy: { lastName: "asc" },
+    }),
+    prisma.employee.findMany({
+      where: {
+        assignedHouses: { some: { houseId: { in: houseIds } } },
+      },
+      select: { id: true, firstName: true, lastName: true },
+      orderBy: { lastName: "asc" },
+    }),
+  ]);
+
   // Calculate stats
   const totalSize = documents.reduce((acc, d) => acc + d.fileSize, 0);
   const clientDocs = documents.filter((d) => d.clientId).length;
@@ -115,6 +132,7 @@ export default async function DocumentsPage({
             View and manage uploaded compliance documents
           </p>
         </div>
+        <BulkUploadSection clients={clients} employees={employees} />
       </div>
 
       {/* Stats */}

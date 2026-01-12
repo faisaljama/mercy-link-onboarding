@@ -359,6 +359,24 @@ export function HouseUtilities({ houseId, userRole }: HouseUtilitiesProps) {
                     />
                   </div>
 
+                  {/* Account Number - visible to Admin and DC */}
+                  {canEdit && (
+                    <>
+                      <div className="col-span-2 pt-2 border-t">
+                        <p className="text-sm font-medium text-slate-700 mb-3">Account Information</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Account Number</Label>
+                        <Input
+                          value={formData.accountNumber}
+                          onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                          placeholder="Account #"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Login Details - Admin Only */}
                   {isAdmin && (
                     <>
                       <div className="col-span-2 pt-2 border-t">
@@ -368,14 +386,6 @@ export function HouseUtilities({ houseId, userRole }: HouseUtilitiesProps) {
                         </p>
                       </div>
                       <div>
-                        <Label>Account Number</Label>
-                        <Input
-                          value={formData.accountNumber}
-                          onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                          placeholder="Account #"
-                        />
-                      </div>
-                      <div>
                         <Label>Username</Label>
                         <Input
                           value={formData.loginUsername}
@@ -383,7 +393,7 @@ export function HouseUtilities({ houseId, userRole }: HouseUtilitiesProps) {
                           placeholder="Username/Email"
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div>
                         <Label>Password</Label>
                         <Input
                           type="text"
@@ -585,8 +595,16 @@ export function HouseUtilities({ houseId, userRole }: HouseUtilitiesProps) {
                           )}
                         </div>
 
+                        {/* Account Number - visible to Admin and DC */}
+                        {canEdit && utility.accountNumber && (
+                          <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                            <span className="font-medium text-blue-800">Account #: </span>
+                            <span className="text-blue-700">{utility.accountNumber}</span>
+                          </div>
+                        )}
+
                         {/* Admin-only: Login details */}
-                        {isAdmin && (utility.loginUsername || utility.loginPassword || utility.accountNumber) && (
+                        {isAdmin && (utility.loginUsername || utility.loginPassword) && (
                           <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded text-sm">
                             <div className="flex items-center justify-between mb-1">
                               <span className="font-medium text-amber-800 flex items-center gap-1">
@@ -607,9 +625,6 @@ export function HouseUtilities({ houseId, userRole }: HouseUtilitiesProps) {
                               </Button>
                             </div>
                             <div className="space-y-1 text-amber-700">
-                              {utility.accountNumber && (
-                                <p>Account: {showPassword ? utility.accountNumber : "••••••••"}</p>
-                              )}
                               {utility.loginUsername && (
                                 <p>Username: {showPassword ? utility.loginUsername : "••••••••"}</p>
                               )}

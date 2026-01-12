@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { PDFDownloadButton } from "@/components/pdf-download-button";
 import {
   User,
   Home,
@@ -103,6 +104,10 @@ export default async function ClientDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
+          <PDFDownloadButton
+            endpoint={`/api/reports/client-compliance?clientId=${client.id}`}
+            label="Compliance Report"
+          />
           <Link href={`/dashboard/clients/${client.id}/face-sheet`}>
             <Button variant="outline">
               <FileText className="mr-2 h-4 w-4" />

@@ -11,13 +11,14 @@ datasource db {
 
 // User roles: ADMIN, DESIGNATED_COORDINATOR, LEAD_STAFF
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String
-  role          String    @default("LEAD_STAFF") // ADMIN, DESIGNATED_MANAGER, DESIGNATED_COORDINATOR, OPERATIONS, HR, FINANCE, LEAD_STAFF
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  password           String
+  name               String
+  role               String    @default("LEAD_STAFF") // ADMIN, DESIGNATED_MANAGER, DESIGNATED_COORDINATOR, OPERATIONS, HR, FINANCE, LEAD_STAFF
+  emailNotifications Boolean   @default(true) // Whether to receive email notifications
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   assignedHouses UserHouse[]
   auditLogs      AuditLog[]
@@ -85,6 +86,28 @@ model User {
   // Accounts Receivable
   arCreated    AccountsReceivable[] @relation("ARCreatedBy")
   arResolved   AccountsReceivable[] @relation("ARResolvedBy")
+
+  // Discipline Tracker
+  issuedCorrectiveActions     CorrectiveAction[] @relation("IssuedCorrectiveActions")
+  voidedCorrectiveActions     CorrectiveAction[] @relation("VoidedCorrectiveActions")
+  correctiveActionSignatures  CorrectiveActionSignature[]
+  correctiveActionDocuments   CorrectiveActionDocument[]
+  approvedPointAdjustments    PointAdjustment[]
+
+  // Employee Training Logs
+  trainingLogsCreated       EmployeeTrainingLog[] @relation("TrainingLogCreatedBy")
+  trainingLogsSupervisor    EmployeeTrainingLog[] @relation("TrainingLogSupervisor")
+  trainingDocsUploaded      EmployeeTrainingDocument[] @relation("TrainingDocUploadedBy")
+
+  // DSP Portal relations
+  choresCreated              Chore[]                     @relation("ChoreCreatedBy")
+  dspDocumentsUploaded       DSPDocument[]               @relation("DSPDocumentUploadedBy")
+  noteTemplatesCreated       NotePromptTemplate[]        @relation("NoteTemplateCreatedBy")
+  promptContextsUpdated      ResidentPromptContext[]     @relation("PromptContextUpdatedBy")
+  profilesUpdated            ResidentOnePageProfile[]    @relation("ProfileUpdatedBy")
+  shiftNotesReviewed         ShiftNote[]                 @relation("ShiftNoteReviewedBy")
+  staffAssignmentsCreated    StaffResidentAssignment[]   @relation("StaffAssignmentCreatedBy")
+  onboardingDocsUploaded     ResidentOnboardingDocument[] @relation("OnboardingDocUploadedBy")
 }
 
 model UserHouse {
@@ -109,6 +132,9 @@ model House {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // DSP Portal: Shift configuration (evening ends at 11 PM or midnight)
+  eveningEndsMidnight Boolean @default(false)
+
   assignedUsers UserHouse[]
   clients       Client[]
   employees     EmployeeHouse[]
@@ -125,6 +151,14 @@ model House {
   serviceAgreements ServiceAgreement[]
   attendanceReports AttendanceReport[]
   accountsReceivable AccountsReceivable[]
+  correctiveActions CorrectiveAction[]
+
+  // DSP Portal relations
+  chores                    Chore[]
+  choreCompletions          ChoreCompletion[]
+  dspDocuments              DSPDocument[]
+  shiftNotes                ShiftNote[]
+  staffResidentAssignments  StaffResidentAssignment[]
 }
 
 // House Utilities and Services
@@ -295,6 +329,14 @@ model Client {
   meetingCompliance   ClientMeetingCompliance[]
   genoaDeliveries    GenoaDelivery[]
   serviceAgreements  ServiceAgreement[]
+
+  // DSP Portal relations
+  onePageProfile            ResidentOnePageProfile?
+  residentPromptContext     ResidentPromptContext?
+  dspDocuments              DSPDocument[]
+  shiftNotes                ShiftNote[]
+  staffAssignments          StaffResidentAssignment[]
+  onboardingDocuments       ResidentOnboardingDocument[]
 }
 
 // Additional Healthcare Providers for clients
@@ -328,9 +370,74 @@ model Employee {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  assignedHouses  EmployeeHouse[]
-  complianceItems ComplianceItem[]
-  documents       Document[]
+  assignedHouses    EmployeeHouse[]
+  complianceItems   ComplianceItem[]
+  documents         Document[]
+  correctiveActions CorrectiveAction[] @relation("EmployeeCorrectiveActions")
+  pointAdjustments  PointAdjustment[]
+  trainingLogs      EmployeeTrainingLog[]
+
+  // DSP Portal relations
+  choreCompletions          ChoreCompletion[]
+  documentAcknowledgments   DocumentAcknowledgment[]
+  shiftNotes                ShiftNote[]
+  residentAssignments       StaffResidentAssignment[]
+  clientOnboardingAcknowledgments ClientOnboardingAcknowledgment[]
+}
+
+// Employee Training Log - tracks new hire orientation and annual training per 245D.09
+model EmployeeTrainingLog {
+  id            String   @id @default(cuid())
+  employeeId    String
+  logType       String   // ORIENTATION, ANNUAL
+  year          Int      // Training year (for annual) or 0 for orientation
+
+  // JSON object storing checklist items: { "item_key": { completed: boolean, completedDate: string?, score: string?, trainerInitials: string?, notes: string? } }
+  checklistItems  String  @default("{}")
+
+  // Training hours summary (for annual training)
+  hoursRequired   Float?
+  hoursCompleted  Float   @default(0)
+
+  // Completion verification
+  employeeSignature     String?   // Base64 signature
+  employeeSignedAt      DateTime?
+  supervisorSignature   String?   // Base64 signature
+  supervisorSignedAt    DateTime?
+  supervisorId          String?
+
+  // General notes
+  notes           String?
+
+  // Timestamps
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdBy     User     @relation("TrainingLogCreatedBy", fields: [createdById], references: [id])
+  supervisor    User?    @relation("TrainingLogSupervisor", fields: [supervisorId], references: [id])
+  documents     EmployeeTrainingDocument[]
+
+  @@unique([employeeId, logType, year])
+  @@index([employeeId])
+}
+
+// Documents attached to training logs
+model EmployeeTrainingDocument {
+  id              String   @id @default(cuid())
+  trainingLogId   String
+  fileName        String
+  filePath        String
+  fileType        String
+  fileSize        Int
+  uploadedById    String
+  uploadedAt      DateTime @default(now())
+
+  trainingLog     EmployeeTrainingLog @relation(fields: [trainingLogId], references: [id], onDelete: Cascade)
+  uploadedBy      User                @relation("TrainingDocUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([trainingLogId])
 }
 
 model EmployeeHouse {
@@ -776,6 +883,7 @@ model DCDailyChecklist {
   onsiteAfterVisitSummaries     Boolean @default(false)
   onsiteOutcomeTracker          Boolean @default(false)
   onsiteFireDrillBinder         Boolean @default(false)
+  onsiteGenoaDeliveryBinder     Boolean @default(false)
   onsiteCommonAreasCleaned      Boolean @default(false)
   onsiteFoodLabeled             Boolean @default(false)
   onsiteSuppliesStocked         Boolean @default(false)
@@ -786,7 +894,9 @@ model DCDailyChecklist {
   onsiteWaterSoftener           Boolean @default(false)
   onsiteFurnaceFilter           Boolean @default(false)
   onsiteExteriorChecked         Boolean @default(false)
+  onsiteSnowRemoval             Boolean @default(false)
   onsiteStaffCoaching           Boolean @default(false)
+  onsiteMailVoicemail           Boolean @default(false)
 
   notes                String?
   followUpItems        String?  // JSON array of follow-up items
@@ -1336,4 +1446,398 @@ model AccountsReceivable {
   @@index([houseId])
   @@index([status])
   @@index([periodStart, periodEnd])
+}
+
+// ============================================
+// DISCIPLINE TRACKER MODELS
+// ============================================
+
+// Violation Categories for Discipline System
+model ViolationCategory {
+  id            String   @id @default(cuid())
+  categoryName  String
+  severityLevel String   // MINOR, MODERATE, SERIOUS, CRITICAL, IMMEDIATE_TERMINATION
+  defaultPoints Int
+  description   String?
+  isActive      Boolean  @default(true)
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  correctiveActions CorrectiveAction[]
+}
+
+// Corrective Action Records
+model CorrectiveAction {
+  id                      String    @id @default(cuid())
+  employeeId              String
+  issuedById              String
+  houseId                 String?
+  violationCategoryId     String
+
+  violationDate           DateTime
+  violationTime           String?
+  incidentDescription     String
+  mitigatingCircumstances String?
+
+  pointsAssigned          Int
+  pointsAdjusted          Int?
+  adjustmentReason        String?
+
+  disciplineLevel         String    // COACHING, VERBAL_WARNING, WRITTEN_WARNING, FINAL_WARNING, PIP, TERMINATION
+  correctiveExpectations  String?   // JSON array of expectations
+  consequencesText        String?
+
+  status                  String    @default("PENDING_SIGNATURE") // PENDING_SIGNATURE, ACKNOWLEDGED, DISPUTED, VOIDED
+  employeeComments        String?
+
+  pipScheduled            Boolean   @default(false)
+  pipDate                 DateTime?
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  voidedAt                DateTime?
+  voidedById              String?
+  voidReason              String?
+
+  employee                Employee  @relation("EmployeeCorrectiveActions", fields: [employeeId], references: [id], onDelete: Cascade)
+  issuedBy                User      @relation("IssuedCorrectiveActions", fields: [issuedById], references: [id])
+  house                   House?    @relation(fields: [houseId], references: [id])
+  violationCategory       ViolationCategory @relation(fields: [violationCategoryId], references: [id])
+  voidedBy                User?     @relation("VoidedCorrectiveActions", fields: [voidedById], references: [id])
+  signatures              CorrectiveActionSignature[]
+  documents               CorrectiveActionDocument[]
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([violationDate])
+}
+
+// Corrective Action Signatures
+model CorrectiveActionSignature {
+  id                  String   @id @default(cuid())
+  correctiveActionId  String
+  signerType          String   // EMPLOYEE, SUPERVISOR, WITNESS, HR
+  signerId            String
+  signatureData       String   // Base64 encoded PNG
+  signedAt            DateTime @default(now())
+  ipAddress           String?
+  deviceInfo          String?
+
+  correctiveAction    CorrectiveAction @relation(fields: [correctiveActionId], references: [id], onDelete: Cascade)
+  signer              User     @relation(fields: [signerId], references: [id])
+
+  @@index([correctiveActionId])
+}
+
+// Corrective Action Supporting Documents
+model CorrectiveActionDocument {
+  id                  String   @id @default(cuid())
+  correctiveActionId  String
+  fileName            String
+  fileType            String
+  fileSize            Int
+  filePath            String
+  uploadedById        String
+  uploadedAt          DateTime @default(now())
+
+  correctiveAction    CorrectiveAction @relation(fields: [correctiveActionId], references: [id], onDelete: Cascade)
+  uploadedBy          User     @relation(fields: [uploadedById], references: [id])
+}
+
+// Discipline Thresholds for Progressive Discipline
+model DisciplineThreshold {
+  id            String   @id @default(cuid())
+  pointMinimum  Int
+  pointMaximum  Int
+  actionRequired String
+  description   String?
+  isActive      Boolean  @default(true)
+}
+
+// Point Adjustments (for reductions, additions, or resets)
+model PointAdjustment {
+  id             String   @id @default(cuid())
+  employeeId     String
+  adjustmentType String   // REDUCTION, ADDITION, RESET
+  points         Int
+  reason         String
+  approvedById   String
+  effectiveDate  DateTime
+  createdAt      DateTime @default(now())
+
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  approvedBy     User     @relation(fields: [approvedById], references: [id])
+}
+
+// ============================================
+// DSP PORTAL MODELS
+// ============================================
+
+// Chore Templates - defined per home
+model Chore {
+  id            String   @id @default(cuid())
+  houseId       String
+  name          String
+  description   String?
+  category      String   // room_checks, common_areas, kitchen_meals, medication_area, safety, laundry, other
+  shifts        String   @default("[]") // JSON array: ["day", "evening", "overnight"]
+  requiresPhoto Boolean  @default(false)
+  isRequired    Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  house         House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdBy     User     @relation("ChoreCreatedBy", fields: [createdById], references: [id])
+  completions   ChoreCompletion[]
+
+  @@index([houseId, isActive])
+}
+
+// Chore Completions - tracks when chores are done
+model ChoreCompletion {
+  id          String   @id @default(cuid())
+  choreId     String
+  houseId     String
+  shiftDate   DateTime @db.Date
+  shiftType   String   // day, evening, overnight
+  completedById String
+  completedAt DateTime @default(now())
+  photoUrls   String   @default("[]") // JSON array of photo URLs
+  notes       String?
+
+  chore       Chore    @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  house       House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  completedBy Employee @relation(fields: [completedById], references: [id], onDelete: Cascade)
+
+  @@unique([choreId, shiftDate, shiftType])
+  @@index([houseId, shiftDate])
+}
+
+// Resident One-Page Profiles - quick reference for DSPs
+model ResidentOnePageProfile {
+  id                   String   @id @default(cuid())
+  clientId             String   @unique
+  photoUrl             String?
+  preferredName        String?
+  pronouns             String?
+  aboutMe              String?  @db.Text
+  communication        String?  @db.Text
+  dailyRoutine         String?  @db.Text
+  likesInterests       String?  @db.Text
+  goodDay              String?  @db.Text
+  badDay               String?  @db.Text
+  supportWhenUpset     String?  @db.Text
+  importantPeople      String?  @db.Text
+  medicalAlerts        String?  @db.Text
+  culturalConsiderations String? @db.Text
+  currentGoals         String?  @db.Text
+  importantToMe        String?  @db.Text
+  importantForMe       String?  @db.Text
+  version              Int      @default(1)
+  updatedById          String?
+  updatedAt            DateTime @default(now())
+  createdAt            DateTime @default(now())
+
+  client               Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  updatedBy            User?    @relation("ProfileUpdatedBy", fields: [updatedById], references: [id])
+}
+
+// DSP Documents - documents requiring acknowledgment
+model DSPDocument {
+  id                    String   @id @default(cuid())
+  documentType          String   // IAPP, SUPPORT_PLAN_ADDENDUM, SELF_MANAGEMENT_ASSESSMENT, POSITIVE_SUPPORT_PLAN, HEALTH_CARE_DIRECTIVE, BEHAVIOR_SUPPORT_PLAN, SEIZURE_PROTOCOL, HOME_POLICIES, ORGANIZATION_POLICIES
+  title                 String
+  clientId              String?  // null for home/org-level documents
+  houseId               String?  // null for org-level documents
+  fileUrl               String
+  version               Int      @default(1)
+  requiresAcknowledgment Boolean @default(true)
+  acknowledgmentDueDays Int      @default(7)
+  uploadedById          String
+  uploadedAt            DateTime @default(now())
+  isActive              Boolean  @default(true)
+
+  client               Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  house                House?   @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  uploadedBy           User     @relation("DSPDocumentUploadedBy", fields: [uploadedById], references: [id])
+  acknowledgments      DocumentAcknowledgment[]
+
+  @@index([clientId])
+  @@index([houseId])
+  @@index([isActive])
+}
+
+// Document Acknowledgments - tracks when DSPs acknowledge documents
+model DocumentAcknowledgment {
+  id                  String    @id @default(cuid())
+  documentId          String
+  staffId             String
+  openedAt            DateTime?
+  viewDurationSeconds Int?
+  scrollCompleted     Boolean   @default(false)
+  acknowledgedAt      DateTime  @default(now())
+  signatureData       String    // Base64 encoded signature
+  attestationText     String
+  hasQuestions        Boolean   @default(false)
+  questionsText       String?
+  ipAddress           String?
+  userAgent           String?
+  transcriptUrl       String?
+
+  document            DSPDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  staff               Employee    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, staffId])
+  @@index([staffId])
+}
+
+// Note Prompt Templates - templates for Claude-assisted note writing
+model NotePromptTemplate {
+  id            String   @id @default(cuid())
+  noteType      String   @unique // progress_note, incident_report, medication_note, activity_note, communication_log
+  displayName   String
+  promptTemplate String  @db.Text
+  isActive      Boolean  @default(true)
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  createdBy     User     @relation("NoteTemplateCreatedBy", fields: [createdById], references: [id])
+}
+
+// Resident Prompt Contexts - personalized context for Claude prompts
+model ResidentPromptContext {
+  id                   String   @id @default(cuid())
+  clientId             String   @unique
+  communicationStyle   String?  @db.Text
+  typicalBehaviors     String?  @db.Text
+  preferences          String?  @db.Text
+  triggers             String?  @db.Text
+  supportStrategies    String?  @db.Text
+  currentGoalsSummary  String?  @db.Text
+  updatedById          String?
+  updatedAt            DateTime @default(now())
+
+  client               Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  updatedBy            User?    @relation("PromptContextUpdatedBy", fields: [updatedById], references: [id])
+}
+
+// Shift Notes - submitted by DSPs
+model ShiftNote {
+  id            String    @id @default(cuid())
+  clientId      String
+  houseId       String
+  noteType      String    // progress_note, incident_report, medication_note, activity_note, communication_log
+  shiftDate     DateTime  @db.Date
+  shiftType     String    // day, evening, overnight
+  content       String    @db.Text
+  submittedById String
+  signatureData String?   // Base64 encoded signature
+  submittedAt   DateTime  @default(now())
+  reviewedById  String?
+  reviewedAt    DateTime?
+
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  house         House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  submittedBy   Employee  @relation(fields: [submittedById], references: [id], onDelete: Cascade)
+  reviewedBy    User?     @relation("ShiftNoteReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([clientId, shiftDate])
+  @@index([houseId, shiftDate])
+  @@index([submittedById])
+}
+
+// Staff-Resident Assignments - tracks which DSPs work with which residents
+model StaffResidentAssignment {
+  id                    String    @id @default(cuid())
+  staffId               String
+  clientId              String
+  houseId               String
+  assignedById          String?
+  assignedAt            DateTime  @default(now())
+  isActive              Boolean   @default(true)
+  onboardingComplete    Boolean   @default(false)
+  onboardingCompletedAt DateTime?
+
+  staff                 Employee  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  client                Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  house                 House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  assignedBy            User?     @relation("StaffAssignmentCreatedBy", fields: [assignedById], references: [id])
+  onboardingAcknowledgments ClientOnboardingAcknowledgment[]
+
+  @@unique([staffId, clientId])
+  @@index([staffId])
+  @@index([clientId])
+  @@index([onboardingComplete])
+}
+
+// Resident Onboarding Documents - IAPP, SPA, SMA for initial review
+model ResidentOnboardingDocument {
+  id            String   @id @default(cuid())
+  clientId      String
+  documentType  String   // IAPP, SUPPORT_PLAN_ADDENDUM, SELF_MANAGEMENT_ASSESSMENT
+  title         String
+  fileUrl       String
+  version       Int      @default(1)
+  effectiveDate DateTime? @db.Date
+  uploadedById  String
+  uploadedAt    DateTime @default(now())
+  isActive      Boolean  @default(true)
+
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  uploadedBy    User     @relation("OnboardingDocUploadedBy", fields: [uploadedById], references: [id])
+  acknowledgments ClientOnboardingAcknowledgment[]
+
+  @@unique([clientId, documentType, version])
+  @@index([clientId])
+  @@index([isActive])
+}
+
+// Client Onboarding Acknowledgments - tracks supervised review of documents
+model ClientOnboardingAcknowledgment {
+  id                        String   @id @default(cuid())
+  staffResidentAssignmentId String
+  staffId                   String
+  clientId                  String
+  documentId                String
+
+  // Document info (denormalized for record keeping)
+  documentType              String
+  documentTitle             String
+  documentVersion           Int
+
+  // Review session details
+  reviewedWithId            String   // User ID of supervisor who conducted review
+  reviewedWithName          String
+  reviewedWithRole          String
+  reviewMethod              String   // in_person, video_call, phone
+
+  // Acknowledgment details
+  acknowledgedAt            DateTime @default(now())
+  attestationText           String
+  signatureData             String   // Base64 encoded signature
+  notes                     String?
+
+  // For Employee Training Record PDF integration
+  trainingRecordSynced      Boolean  @default(false)
+  trainingRecordSyncedAt    DateTime?
+
+  // Transcript
+  transcriptUrl             String?
+
+  // Audit fields
+  ipAddress                 String?
+  userAgent                 String?
+
+  staffResidentAssignment   StaffResidentAssignment @relation(fields: [staffResidentAssignmentId], references: [id], onDelete: Cascade)
+  staff                     Employee @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  document                  ResidentOnboardingDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, clientId, documentType])
+  @@index([staffId])
+  @@index([staffResidentAssignmentId])
 }
