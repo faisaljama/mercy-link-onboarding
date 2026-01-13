@@ -5,6 +5,10 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { ShiftNotesPDF, getShiftNotesFilename } from "@/lib/pdf-templates/shift-notes-pdf";
 import { startOfDay, endOfDay, parseISO } from "date-fns";
 
+// Force Node.js runtime for PDF generation
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
