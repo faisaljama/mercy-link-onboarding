@@ -109,6 +109,12 @@ model User {
   staffAssignmentsCreated    StaffResidentAssignment[]   @relation("StaffAssignmentCreatedBy")
   onboardingDocsUploaded     ResidentOnboardingDocument[] @relation("OnboardingDocUploadedBy")
   notePromptsUpdated         ResidentNotePrompt[]        @relation("NotePromptUpdatedBy")
+
+  // Medication Verification relations
+  scheduledMedVerifications  ScheduledMedVerification[]  @relation("ScheduledMedVerifiedBy")
+  prnInventoryUpdates        PrnInventory[]              @relation("PrnInventoryUpdatedBy")
+  prnAlertAcknowledgments    PrnAlertLog[]               @relation("PrnAlertAcknowledgedBy")
+  prnHistoryUpdates          PrnHistory[]                @relation("PrnHistoryUpdatedBy")
 }
 
 model UserHouse {
@@ -160,6 +166,10 @@ model House {
   dspDocuments              DSPDocument[]
   shiftNotes                ShiftNote[]
   staffResidentAssignments  StaffResidentAssignment[]
+
+  // Medication Verification relations
+  scheduledMedVerifications ScheduledMedVerification[]
+  prnInventory              PrnInventory[]
 }
 
 // House Utilities and Services
@@ -339,6 +349,10 @@ model Client {
   staffAssignments          StaffResidentAssignment[]
   onboardingDocuments       ResidentOnboardingDocument[]
   notePrompt                ResidentNotePrompt?
+
+  // Medication Verification relations
+  scheduledMedVerifications ScheduledMedVerification[]
+  prnInventory              PrnInventory[]
 }
 
 // Additional Healthcare Providers for clients
@@ -1855,4 +1869,87 @@ model ClientOnboardingAcknowledgment {
   @@unique([staffId, clientId, documentType])
   @@index([staffId])
   @@index([staffResidentAssignmentId])
+}
+
+// ============================================
+// MEDICATION VERIFICATION SYSTEM MODELS
+// ============================================
+
+// Scheduled Medication Verification - DC verifies Genoa blister pack dates
+model ScheduledMedVerification {
+  id              String    @id @default(cuid())
+  clientId        String
+  houseId         String
+  visitDate       DateTime  @db.Date
+  medPackDate     DateTime  @db.Date
+  photoUrl        String
+  notes           String?
+  verifiedById    String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  house           House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  verifiedBy      User      @relation("ScheduledMedVerifiedBy", fields: [verifiedById], references: [id])
+
+  @@index([houseId])
+  @@index([clientId])
+  @@index([visitDate])
+}
+
+// PRN Inventory - tracks PRN medication quantities per resident
+model PrnInventory {
+  id                  String    @id @default(cuid())
+  clientId            String
+  houseId             String
+  medicationName      String
+  quantityRemaining   Int
+  expirationDate      DateTime  @db.Date
+  photoUrl            String?
+  notes               String?
+  updatedById         String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  client              Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  house               House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  updatedBy           User      @relation("PrnInventoryUpdatedBy", fields: [updatedById], references: [id])
+  alertLogs           PrnAlertLog[]
+  history             PrnHistory[]
+
+  @@index([houseId])
+  @@index([clientId])
+  @@index([quantityRemaining])
+}
+
+// PRN Alert Log - tracks low stock alert acknowledgments
+model PrnAlertLog {
+  id                    String    @id @default(cuid())
+  prnInventoryId        String
+  alertType             String    // popup, dashboard
+  quantityAtAlert       Int
+  acknowledgmentType    String?   // called, closed, on_order, other
+  acknowledgmentNotes   String?
+  acknowledgedById      String?
+  acknowledgedAt        DateTime?
+  createdAt             DateTime  @default(now())
+
+  prnInventory          PrnInventory @relation(fields: [prnInventoryId], references: [id], onDelete: Cascade)
+  acknowledgedBy        User?        @relation("PrnAlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+
+  @@index([prnInventoryId])
+}
+
+// PRN History - tracks quantity changes over time
+model PrnHistory {
+  id                  String    @id @default(cuid())
+  prnInventoryId      String
+  quantityRemaining   Int
+  updatedById         String
+  createdAt           DateTime  @default(now())
+
+  prnInventory        PrnInventory @relation(fields: [prnInventoryId], references: [id], onDelete: Cascade)
+  updatedBy           User         @relation("PrnHistoryUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([prnInventoryId])
 }

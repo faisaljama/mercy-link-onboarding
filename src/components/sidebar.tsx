@@ -115,6 +115,7 @@ const moreGroupedNavigation: NavGroup[] = [
       { name: "Weekly Reports", href: "/dashboard/weekly-reports", icon: FileBarChart },
       { name: "QA Checklist", href: "/dashboard/qa-checklist", icon: ClipboardCheck },
       { name: "Genoa Deliveries", href: "/dashboard/genoa-deliveries", icon: Pill },
+      { name: "Med Verification", href: "/dashboard/medications", icon: Pill },
       { name: "Fire Drills", href: "/dashboard/fire-drills", icon: Flame },
       { name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
     ],
