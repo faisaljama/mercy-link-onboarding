@@ -71,7 +71,7 @@ export function NotesFilters({
     : new Date();
 
   const handleDownloadPDF = async () => {
-    if (!currentFilters.resident) {
+    if (!currentFilters.resident || currentFilters.resident === "all") {
       alert("Please select a resident to download their notes as PDF");
       return;
     }
@@ -123,14 +123,14 @@ export function NotesFilters({
 
       {/* House Filter */}
       <Select
-        value={currentFilters.house || ""}
-        onValueChange={(value) => updateParams({ house: value || null })}
+        value={currentFilters.house || "all"}
+        onValueChange={(value) => updateParams({ house: value === "all" ? null : value })}
       >
         <SelectTrigger className="w-[160px] bg-white">
           <SelectValue placeholder="All houses" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All houses</SelectItem>
+          <SelectItem value="all">All houses</SelectItem>
           {houses.map((house) => (
             <SelectItem key={house.id} value={house.id}>
               {house.name}
@@ -166,14 +166,14 @@ export function NotesFilters({
 
       {/* Status Filter */}
       <Select
-        value={currentFilters.status || ""}
-        onValueChange={(value) => updateParams({ status: value || null })}
+        value={currentFilters.status || "all"}
+        onValueChange={(value) => updateParams({ status: value === "all" ? null : value })}
       >
         <SelectTrigger className="w-[140px] bg-white">
           <SelectValue placeholder="All statuses" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All statuses</SelectItem>
+          <SelectItem value="all">All statuses</SelectItem>
           <SelectItem value="pending">Pending Review</SelectItem>
           <SelectItem value="reviewed">Reviewed</SelectItem>
         </SelectContent>
@@ -181,14 +181,14 @@ export function NotesFilters({
 
       {/* Staff Filter */}
       <Select
-        value={currentFilters.staff || ""}
-        onValueChange={(value) => updateParams({ staff: value || null })}
+        value={currentFilters.staff || "all"}
+        onValueChange={(value) => updateParams({ staff: value === "all" ? null : value })}
       >
         <SelectTrigger className="w-[160px] bg-white">
           <SelectValue placeholder="All staff" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All staff</SelectItem>
+          <SelectItem value="all">All staff</SelectItem>
           {staffList.map((s) => (
             <SelectItem key={s.id} value={s.id}>
               {s.firstName} {s.lastName}
@@ -200,14 +200,14 @@ export function NotesFilters({
       {/* Resident Filter (for PDF export) */}
       {residents.length > 0 && (
         <Select
-          value={currentFilters.resident || ""}
-          onValueChange={(value) => updateParams({ resident: value || null })}
+          value={currentFilters.resident || "all"}
+          onValueChange={(value) => updateParams({ resident: value === "all" ? null : value })}
         >
           <SelectTrigger className="w-[180px] bg-white">
             <SelectValue placeholder="Select resident" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All residents</SelectItem>
+            <SelectItem value="all">All residents</SelectItem>
             {residents.map((r) => (
               <SelectItem key={r.id} value={r.id}>
                 {r.onePageProfile?.preferredName || r.firstName} {r.lastName}
@@ -218,7 +218,7 @@ export function NotesFilters({
       )}
 
       {/* PDF Download Button */}
-      {currentFilters.resident && (
+      {currentFilters.resident && currentFilters.resident !== "all" && (
         <Button
           variant="outline"
           size="sm"

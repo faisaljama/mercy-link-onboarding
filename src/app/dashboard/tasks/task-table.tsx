@@ -37,6 +37,7 @@ import {
   Calendar,
   Home,
   Eye,
+  PlayCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -70,6 +71,7 @@ interface Task {
 interface TaskTableProps {
   tasks: Task[];
   userRole: string;
+  userId: string;
 }
 
 function getPriorityBadge(priority: string) {
@@ -89,6 +91,8 @@ function getStatusBadge(status: string) {
   switch (status) {
     case "PENDING":
       return <Badge className="bg-blue-100 text-blue-800">Pending</Badge>;
+    case "IN_PROGRESS":
+      return <Badge className="bg-purple-100 text-purple-800">In Progress</Badge>;
     case "COMPLETED":
       return <Badge className="bg-yellow-100 text-yellow-800">Completed</Badge>;
     case "APPROVED":
@@ -130,16 +134,48 @@ function formatRoles(rolesJson: string) {
   }
 }
 
-export function TaskTable({ tasks, userRole }: TaskTableProps) {
+export function TaskTable({ tasks, userRole, userId }: TaskTableProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [incompleteDialogOpen, setIncompleteDialogOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [incompleteNote, setIncompleteNote] = useState("");
 
-  const canEdit = userRole !== "LEAD_STAFF";
+  // Anyone can update task status (start progress, complete, incomplete)
+  // But only creator and admin can edit task details
+  const canUpdateStatus = userRole !== "LEAD_STAFF";
   const canApprove = userRole === "ADMIN";
   const canDelete = userRole === "ADMIN";
+  const isAdmin = userRole === "ADMIN";
+
+  // Check if user can edit a specific task (creator or admin only)
+  const canEditTask = (task: Task) => {
+    return isAdmin || task.createdBy.id === userId;
+  };
+
+  const handleStartProgress = async (taskId: string) => {
+    setLoading(taskId);
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "IN_PROGRESS" }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || "Failed to start task");
+        return;
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.error("Error starting task:", error);
+      alert("Failed to start task");
+    } finally {
+      setLoading(null);
+    }
+  };
 
   const handleComplete = async (taskId: string) => {
     setLoading(taskId);
@@ -244,7 +280,7 @@ export function TaskTable({ tasks, userRole }: TaskTableProps) {
   };
 
   const isOverdue = (task: Task) => {
-    return task.status === "PENDING" && new Date(task.dueDate) < new Date();
+    return (task.status === "PENDING" || task.status === "IN_PROGRESS") && new Date(task.dueDate) < new Date();
   };
 
   return (
@@ -341,7 +377,29 @@ export function TaskTable({ tasks, userRole }: TaskTableProps) {
                       </Link>
                     </DropdownMenuItem>
 
-                    {canEdit && task.status === "PENDING" && (
+                    {canUpdateStatus && task.status === "PENDING" && (
+                      <>
+                        <DropdownMenuItem onClick={() => handleStartProgress(task.id)}>
+                          <PlayCircle className="mr-2 h-4 w-4 text-purple-600" />
+                          Start Progress
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleComplete(task.id)}>
+                          <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />
+                          Mark Complete
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedTaskId(task.id);
+                            setIncompleteDialogOpen(true);
+                          }}
+                        >
+                          <XCircle className="mr-2 h-4 w-4 text-orange-600" />
+                          Mark Incomplete
+                        </DropdownMenuItem>
+                      </>
+                    )}
+
+                    {canUpdateStatus && task.status === "IN_PROGRESS" && (
                       <>
                         <DropdownMenuItem onClick={() => handleComplete(task.id)}>
                           <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />

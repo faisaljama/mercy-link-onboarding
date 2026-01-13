@@ -24,6 +24,7 @@ import {
   XCircle,
   Shield,
   Trash2,
+  PlayCircle,
 } from "lucide-react";
 
 interface Task {
@@ -35,7 +36,7 @@ interface Task {
 interface TaskActionsProps {
   task: Task;
   userRole: string;
-  canComplete: boolean;
+  canUpdateStatus: boolean;
   canApprove: boolean;
   showApproveOnly?: boolean;
 }
@@ -43,7 +44,7 @@ interface TaskActionsProps {
 export function TaskActions({
   task,
   userRole,
-  canComplete,
+  canUpdateStatus,
   canApprove,
   showApproveOnly = false,
 }: TaskActionsProps) {
@@ -51,6 +52,30 @@ export function TaskActions({
   const [loading, setLoading] = useState(false);
   const [incompleteDialogOpen, setIncompleteDialogOpen] = useState(false);
   const [incompleteNote, setIncompleteNote] = useState("");
+
+  const handleStartProgress = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "IN_PROGRESS" }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || "Failed to start task");
+        return;
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.error("Error starting task:", error);
+      alert("Failed to start task");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleComplete = async () => {
     setLoading(true);
@@ -175,7 +200,24 @@ export function TaskActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {canComplete && (
+          {canUpdateStatus && task.status === "PENDING" && (
+            <>
+              <DropdownMenuItem onClick={handleStartProgress}>
+                <PlayCircle className="mr-2 h-4 w-4 text-purple-600" />
+                Start Progress
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleComplete}>
+                <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />
+                Mark Complete
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIncompleteDialogOpen(true)}>
+                <XCircle className="mr-2 h-4 w-4 text-orange-600" />
+                Mark Incomplete
+              </DropdownMenuItem>
+            </>
+          )}
+
+          {canUpdateStatus && task.status === "IN_PROGRESS" && (
             <>
               <DropdownMenuItem onClick={handleComplete}>
                 <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />

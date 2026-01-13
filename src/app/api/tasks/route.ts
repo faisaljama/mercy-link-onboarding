@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const categoryId = searchParams.get("categoryId");
     const status = searchParams.get("status");
     const priority = searchParams.get("priority");
+    const assignedTo = searchParams.get("assignedTo");
 
     // Default to current month/year
     const now = new Date();
@@ -55,6 +56,13 @@ export async function GET(request: NextRequest) {
 
     if (priority) {
       where.priority = priority;
+    }
+
+    // Filter by assigned user
+    if (assignedTo) {
+      where.assignedUsers = {
+        some: { userId: assignedTo },
+      };
     }
 
     const tasks = await prisma.task.findMany({
@@ -109,11 +117,12 @@ export async function GET(request: NextRequest) {
     // Calculate stats
     const total = tasks.length;
     const pending = tasks.filter((t) => t.status === "PENDING").length;
+    const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS").length;
     const completed = tasks.filter((t) => t.status === "COMPLETED").length;
     const approved = tasks.filter((t) => t.status === "APPROVED").length;
     const incomplete = tasks.filter((t) => t.status === "INCOMPLETE").length;
     const overdue = tasks.filter(
-      (t) => t.status === "PENDING" && new Date(t.dueDate) < new Date()
+      (t) => (t.status === "PENDING" || t.status === "IN_PROGRESS") && new Date(t.dueDate) < new Date()
     ).length;
 
     return NextResponse.json({
@@ -121,7 +130,7 @@ export async function GET(request: NextRequest) {
       houses,
       categories,
       users,
-      stats: { total, pending, completed, approved, incomplete, overdue },
+      stats: { total, pending, inProgress, completed, approved, incomplete, overdue },
       filters: { month: filterMonth, year: filterYear },
     });
   } catch (error) {

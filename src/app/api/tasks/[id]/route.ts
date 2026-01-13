@@ -74,11 +74,6 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only Admin, DM, and DC can update tasks
-    if (session.role === "LEAD_STAFF") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { id } = await params;
     const body = await request.json();
 
@@ -89,6 +84,17 @@ export async function PUT(
 
     if (!existing) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    // Only the creator or admin can edit tasks
+    const isCreator = existing.createdById === session.id;
+    const isAdmin = session.role === "ADMIN";
+
+    if (!isCreator && !isAdmin) {
+      return NextResponse.json(
+        { error: "Only the task creator or admin can edit this task" },
+        { status: 403 }
+      );
     }
 
     // Cannot edit approved tasks

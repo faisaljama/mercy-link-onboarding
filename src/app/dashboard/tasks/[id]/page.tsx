@@ -87,6 +87,8 @@ function getStatusBadge(status: string) {
   switch (status) {
     case "PENDING":
       return <Badge className="bg-blue-100 text-blue-800">Pending</Badge>;
+    case "IN_PROGRESS":
+      return <Badge className="bg-purple-100 text-purple-800">In Progress</Badge>;
     case "COMPLETED":
       return <Badge className="bg-yellow-100 text-yellow-800">Completed - Awaiting Approval</Badge>;
     case "APPROVED":
@@ -143,10 +145,13 @@ export default async function TaskDetailPage({
     notFound();
   }
 
-  const isOverdue = task.status === "PENDING" && new Date(task.dueDate) < new Date();
-  const canEdit = session.role !== "LEAD_STAFF" && task.status !== "APPROVED";
+  const isOverdue = (task.status === "PENDING" || task.status === "IN_PROGRESS") && new Date(task.dueDate) < new Date();
+  // Only creator and admin can edit task details
+  const isCreator = task.createdBy.id === session.id;
+  const isAdmin = session.role === "ADMIN";
+  const canEdit = (isCreator || isAdmin) && task.status !== "APPROVED";
   const canApprove = session.role === "ADMIN" && task.status === "COMPLETED";
-  const canComplete = session.role !== "LEAD_STAFF" && task.status === "PENDING";
+  const canUpdateStatus = session.role !== "LEAD_STAFF" && (task.status === "PENDING" || task.status === "IN_PROGRESS");
 
   return (
     <div className="space-y-6">
@@ -163,7 +168,7 @@ export default async function TaskDetailPage({
         <TaskActions
           task={task}
           userRole={session.role}
-          canComplete={canComplete}
+          canUpdateStatus={canUpdateStatus}
           canApprove={canApprove}
         />
       </div>
@@ -363,6 +368,29 @@ export default async function TaskDetailPage({
                   </div>
                 )}
 
+                {/* In Progress */}
+                {task.status === "IN_PROGRESS" && (
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                      isOverdue ? "bg-red-100" : "bg-purple-100"
+                    }`}>
+                      {isOverdue ? (
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-purple-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className={`font-medium ${isOverdue ? "text-red-600" : "text-purple-600"}`}>
+                        {isOverdue ? "Overdue - In Progress" : "In Progress"}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        Due {format(new Date(task.dueDate), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {task.status === "COMPLETED" && (
                   <div className="flex items-start gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
@@ -462,7 +490,7 @@ export default async function TaskDetailPage({
                 <TaskActions
                   task={task}
                   userRole={session.role}
-                  canComplete={false}
+                  canUpdateStatus={false}
                   canApprove={true}
                   showApproveOnly
                 />

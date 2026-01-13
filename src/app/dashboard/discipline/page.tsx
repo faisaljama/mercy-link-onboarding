@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, getUserHouseIds } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -12,11 +13,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Scale,
   AlertTriangle,
-  FileWarning,
   Clock,
+  FileWarning,
+  Plus,
+  Eye,
   Users,
-  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { format, subDays } from "date-fns";
@@ -24,7 +27,7 @@ import { DisciplineFilters } from "./discipline-filters";
 import { NewActionDialog } from "./new-action-dialog";
 
 interface SearchParams {
-  houseId?: string;
+  house?: string;
   status?: string;
   severity?: string;
   search?: string;
@@ -36,13 +39,11 @@ async function getCorrectiveActions(
   userId: string,
   filters: SearchParams
 ) {
-  const ninetyDaysAgo = subDays(new Date(), 90);
-
-  // Build where clause based on role
   const whereClause: Record<string, unknown> = {};
 
+  // Role-based filtering
   if (userRole === "ADMIN" || userRole === "HR") {
-    // Admin/HR see all
+    // Admin/HR can see all records
   } else if (userRole === "DESIGNATED_MANAGER") {
     whereClause.houseId = { in: houseIds };
   } else {
@@ -53,13 +54,13 @@ async function getCorrectiveActions(
   }
 
   // Apply filters
-  if (filters.houseId) {
-    whereClause.houseId = filters.houseId;
+  if (filters.house && filters.house !== "all") {
+    whereClause.houseId = filters.house;
   }
-  if (filters.status) {
+  if (filters.status && filters.status !== "all") {
     whereClause.status = filters.status;
   }
-  if (filters.severity) {
+  if (filters.severity && filters.severity !== "all") {
     whereClause.violationCategory = { severityLevel: filters.severity };
   }
 
@@ -82,74 +83,120 @@ async function getCorrectiveActions(
       },
       violationCategory: true,
       signatures: {
-        select: { signerType: true },
+        select: { signerType: true, signedAt: true },
       },
     },
     orderBy: { violationDate: "desc" },
     take: 100,
   });
 
-  // Calculate stats
-  const stats = {
-    total: actions.length,
-    pendingSignatures: actions.filter((a) => a.status === "PENDING_SIGNATURE").length,
-    thisWeek: actions.filter((a) => {
-      const sevenDaysAgo = subDays(new Date(), 7);
-      return new Date(a.createdAt) >= sevenDaysAgo;
-    }).length,
-  };
+  return actions;
+}
 
-  // Get at-risk employees (14+ points in rolling 90 days)
-  const atRiskCount = await prisma.$queryRaw<{ count: string }[]>`
+async function getStats(houseIds: string[], userRole: string) {
+  const ninetyDaysAgo = subDays(new Date(), 90);
+  const sevenDaysAgo = subDays(new Date(), 7);
+
+  const whereClause: Record<string, unknown> =
+    userRole === "ADMIN" || userRole === "HR"
+      ? {}
+      : { houseId: { in: houseIds } };
+
+  const [totalActions, pendingSignatures, thisWeek] = await Promise.all([
+    prisma.correctiveAction.count({
+      where: { ...whereClause, violationDate: { gte: ninetyDaysAgo } },
+    }),
+    prisma.correctiveAction.count({
+      where: { ...whereClause, status: "PENDING_SIGNATURE" },
+    }),
+    prisma.correctiveAction.count({
+      where: { ...whereClause, createdAt: { gte: sevenDaysAgo } },
+    }),
+  ]);
+
+  // Count employees at risk (14+ points in 90 days)
+  const atRiskCount = await prisma.$queryRaw<{ count: bigint }[]>`
     SELECT COUNT(*) as count FROM (
-      SELECT "employeeId"
-      FROM "CorrectiveAction"
-      WHERE "violationDate" >= ${ninetyDaysAgo}
-        AND status != 'VOIDED'
-      GROUP BY "employeeId"
-      HAVING SUM(COALESCE("pointsAdjusted", "pointsAssigned")) >= 14
+      SELECT ca."employeeId"
+      FROM "CorrectiveAction" ca
+      WHERE ca."violationDate" >= ${ninetyDaysAgo}
+        AND ca.status != 'VOIDED'
+      GROUP BY ca."employeeId"
+      HAVING SUM(COALESCE(ca."pointsAdjusted", ca."pointsAssigned")) >= 14
     ) as at_risk
   `;
 
   return {
-    actions,
-    stats: {
-      ...stats,
-      atRiskEmployees: parseInt(atRiskCount[0]?.count || "0"),
-    },
+    totalActions,
+    pendingSignatures,
+    thisWeek,
+    atRiskEmployees: Number(atRiskCount[0]?.count || 0),
   };
 }
 
+async function getHouses(houseIds: string[]) {
+  return prisma.house.findMany({
+    where: { id: { in: houseIds } },
+    orderBy: { name: "asc" },
+  });
+}
+
+async function getEmployees(houseIds: string[]) {
+  return prisma.employee.findMany({
+    where: {
+      status: "ACTIVE",
+      assignedHouses: {
+        some: { houseId: { in: houseIds } },
+      },
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      position: true,
+    },
+    orderBy: { lastName: "asc" },
+  });
+}
+
+async function getViolationCategories() {
+  return prisma.violationCategory.findMany({
+    where: { isActive: true },
+    orderBy: [{ severityLevel: "asc" }, { displayOrder: "asc" }],
+  });
+}
+
 function getStatusBadge(status: string) {
-  switch (status) {
-    case "PENDING_SIGNATURE":
-      return <Badge className="bg-yellow-100 text-yellow-800">Pending Signature</Badge>;
-    case "ACKNOWLEDGED":
-      return <Badge className="bg-green-100 text-green-800">Acknowledged</Badge>;
-    case "DISPUTED":
-      return <Badge className="bg-orange-100 text-orange-800">Disputed</Badge>;
-    case "VOIDED":
-      return <Badge className="bg-slate-100 text-slate-800">Voided</Badge>;
-    default:
-      return <Badge>{status}</Badge>;
-  }
+  const badges: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+    PENDING_SIGNATURE: { label: "Pending Signature", variant: "secondary" },
+    ACKNOWLEDGED: { label: "Acknowledged", variant: "default" },
+    DISPUTED: { label: "Disputed", variant: "destructive" },
+    VOIDED: { label: "Voided", variant: "outline" },
+  };
+  return badges[status] || { label: status, variant: "outline" };
 }
 
 function getSeverityBadge(severity: string) {
-  switch (severity) {
-    case "MINOR":
-      return <Badge variant="outline" className="border-blue-300 text-blue-700">Minor</Badge>;
-    case "MODERATE":
-      return <Badge variant="outline" className="border-yellow-300 text-yellow-700">Moderate</Badge>;
-    case "SERIOUS":
-      return <Badge variant="outline" className="border-orange-300 text-orange-700">Serious</Badge>;
-    case "CRITICAL":
-      return <Badge variant="outline" className="border-red-300 text-red-700">Critical</Badge>;
-    case "IMMEDIATE_TERMINATION":
-      return <Badge className="bg-red-600 text-white">Immediate Review</Badge>;
-    default:
-      return <Badge variant="outline">{severity}</Badge>;
-  }
+  const badges: Record<string, string> = {
+    MINOR: "bg-blue-100 text-blue-800",
+    MODERATE: "bg-yellow-100 text-yellow-800",
+    SERIOUS: "bg-orange-100 text-orange-800",
+    CRITICAL: "bg-red-100 text-red-800",
+    IMMEDIATE_TERMINATION: "bg-red-600 text-white",
+  };
+  return badges[severity] || "bg-gray-100 text-gray-800";
+}
+
+function getDisciplineLevelBadge(level: string) {
+  const labels: Record<string, string> = {
+    COACHING: "Coaching",
+    VERBAL_WARNING: "Verbal Warning",
+    WRITTEN_WARNING: "Written Warning",
+    FINAL_WARNING: "Final Warning",
+    PIP: "PIP",
+    TERMINATION: "Termination",
+  };
+  return labels[level] || level;
 }
 
 export default async function DisciplinePage({
@@ -160,87 +207,88 @@ export default async function DisciplinePage({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const params = await searchParams;
+  // Check permissions
+  const allowedRoles = ["ADMIN", "HR", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"];
+  if (!allowedRoles.includes(session.role)) {
+    redirect("/dashboard");
+  }
+
+  const resolvedParams = await searchParams;
   const houseIds = await getUserHouseIds(session.id);
-  const { actions, stats } = await getCorrectiveActions(
-    houseIds,
-    session.role,
-    session.id,
-    params
-  );
+  
+  const [actions, stats, houses, employees, categories] = await Promise.all([
+    getCorrectiveActions(houseIds, session.role, session.id, resolvedParams),
+    getStats(houseIds, session.role),
+    getHouses(houseIds),
+    getEmployees(houseIds),
+    getViolationCategories(),
+  ]);
 
-  // Get houses and employees for filters/form
-  const houses = await prisma.house.findMany({
-    where: session.role === "ADMIN" || session.role === "HR"
-      ? {}
-      : { id: { in: houseIds } },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
-
-  const employees = await prisma.employee.findMany({
-    where: {
-      status: "ACTIVE",
-      ...(session.role === "ADMIN" || session.role === "HR"
-        ? {}
-        : { assignedHouses: { some: { houseId: { in: houseIds } } } }),
-    },
-    select: { id: true, firstName: true, lastName: true, position: true },
-    orderBy: { lastName: "asc" },
-  });
-
-  const canCreate = ["ADMIN", "HR", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"].includes(session.role);
+  // Check if categories are seeded
+  const categoriesSeeded = categories.length > 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Discipline Tracker</h1>
-          <p className="text-slate-500">
-            Manage employee corrective actions and track discipline points
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <Scale className="h-8 w-8 text-purple-600" />
+            Discipline Tracker
+          </h1>
+          <p className="text-slate-500 mt-1">
+            Progressive discipline with rolling 90-day point system
           </p>
         </div>
-        {canCreate && (
-          <NewActionDialog houses={houses} employees={employees} />
+        {categoriesSeeded ? (
+          <NewActionDialog
+            employees={employees}
+            houses={houses}
+          />
+        ) : (
+          <SeedCategoriesButton />
         )}
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Active Actions</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-sm text-slate-500">Active (90 Days)</p>
+                <p className="text-2xl font-bold">{stats.totalActions}</p>
               </div>
-              <FileText className="h-8 w-8 text-blue-200" />
+              <Scale className="h-8 w-8 text-purple-300" />
             </div>
           </CardContent>
         </Card>
-        <Card>
+        
+        <Card className={stats.atRiskEmployees > 0 ? "border-red-200 bg-red-50" : ""}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">At-Risk Employees</p>
                 <p className="text-2xl font-bold text-red-600">{stats.atRiskEmployees}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-200" />
+              <AlertTriangle className="h-8 w-8 text-red-300" />
             </div>
-            <p className="text-xs text-slate-400 mt-1">14+ points</p>
+            <p className="text-xs text-slate-500 mt-2">14+ points in 90 days</p>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className={stats.pendingSignatures > 0 ? "border-orange-200 bg-orange-50" : ""}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Pending Signatures</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pendingSignatures}</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.pendingSignatures}</p>
               </div>
-              <FileWarning className="h-8 w-8 text-yellow-200" />
+              <Clock className="h-8 w-8 text-orange-300" />
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -248,7 +296,7 @@ export default async function DisciplinePage({
                 <p className="text-sm text-slate-500">This Week</p>
                 <p className="text-2xl font-bold">{stats.thisWeek}</p>
               </div>
-              <Clock className="h-8 w-8 text-slate-200" />
+              <FileWarning className="h-8 w-8 text-slate-300" />
             </div>
           </CardContent>
         </Card>
@@ -257,21 +305,23 @@ export default async function DisciplinePage({
       {/* Filters */}
       <DisciplineFilters houses={houses} />
 
-      {/* Actions Table */}
+      {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Corrective Actions</CardTitle>
-          <CardDescription>
-            All corrective actions with their current status
-          </CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Corrective Actions
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {actions.length === 0 ? (
-            <div className="py-12 text-center text-slate-500">
-              <FileText className="mx-auto h-12 w-12 text-slate-300 mb-4" />
-              <p>No corrective actions found</p>
+            <div className="text-center py-12 text-slate-500">
+              <Scale className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+              <p className="font-medium">No corrective actions found</p>
               <p className="text-sm mt-1">
-                Create a new corrective action to get started
+                {categoriesSeeded
+                  ? "Create a new corrective action to get started"
+                  : "Seed violation categories first to create corrective actions"}
               </p>
             </div>
           ) : (
@@ -283,76 +333,87 @@ export default async function DisciplinePage({
                   <TableHead>Site</TableHead>
                   <TableHead>Violation</TableHead>
                   <TableHead>Points</TableHead>
-                  <TableHead>Issued By</TableHead>
+                  <TableHead>Level</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {actions.map((action) => (
-                  <TableRow key={action.id}>
-                    <TableCell>
-                      <span className="text-sm">
+                {actions.map((action) => {
+                  const statusBadge = getStatusBadge(action.status);
+                  const severityClass = getSeverityBadge(action.violationCategory.severityLevel);
+                  const points = action.pointsAdjusted ?? action.pointsAssigned;
+
+                  return (
+                    <TableRow key={action.id}>
+                      <TableCell className="font-medium">
                         {format(new Date(action.violationDate), "MMM d, yyyy")}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        href={`/dashboard/employees/${action.employee.id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        <div className="font-medium">
-                          {action.employee.lastName}, {action.employee.firstName}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">
+                            {action.employee.firstName} {action.employee.lastName}
+                          </p>
+                          <p className="text-xs text-slate-500">{action.employee.position}</p>
                         </div>
-                        <div className="text-xs text-slate-500">
-                          {action.employee.position}
+                      </TableCell>
+                      <TableCell>{action.house?.name || "—"}</TableCell>
+                      <TableCell>
+                        <div>
+                          <Badge className={severityClass}>
+                            {action.violationCategory.severityLevel}
+                          </Badge>
+                          <p className="text-sm mt-1 max-w-[200px] truncate">
+                            {action.violationCategory.categoryName}
+                          </p>
                         </div>
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      {action.house ? (
-                        <span className="text-sm">{action.house.name}</span>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium truncate max-w-[200px]">
-                          {action.violationCategory.categoryName}
-                        </div>
-                        {getSeverityBadge(action.violationCategory.severityLevel)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">
-                        {action.pointsAdjusted ?? action.pointsAssigned}
-                      </span>
-                      {action.pointsAdjusted && action.pointsAdjusted !== action.pointsAssigned && (
-                        <span className="text-xs text-slate-400 ml-1">
-                          (was {action.pointsAssigned})
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold text-lg">{points}</span>
+                        {action.pointsAdjusted && action.pointsAdjusted !== action.pointsAssigned && (
+                          <span className="text-xs text-slate-500 ml-1">
+                            (was {action.pointsAssigned})
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {getDisciplineLevelBadge(action.disciplineLevel)}
                         </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">{action.issuedBy.name}</span>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(action.status)}</TableCell>
-                    <TableCell>
-                      <Link
-                        href={`/dashboard/discipline/${action.id}`}
-                        className="text-blue-600 hover:underline text-sm"
-                      >
-                        View
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusBadge.variant}>
+                          {statusBadge.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/dashboard/discipline/${action.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Component to seed categories
+function SeedCategoriesButton() {
+  return (
+    <form action="/api/violation-categories/seed" method="POST">
+      <Button type="submit" className="gap-2">
+        <Plus className="h-4 w-4" />
+        Seed Violation Categories
+      </Button>
+    </form>
   );
 }

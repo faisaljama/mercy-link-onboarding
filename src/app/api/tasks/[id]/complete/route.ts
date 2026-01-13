@@ -22,9 +22,9 @@ export async function POST(
     const body = await request.json();
     const { status, note } = body;
 
-    if (!status || !["COMPLETED", "INCOMPLETE"].includes(status)) {
+    if (!status || !["IN_PROGRESS", "COMPLETED", "INCOMPLETE"].includes(status)) {
       return NextResponse.json(
-        { error: "Status must be COMPLETED or INCOMPLETE" },
+        { error: "Status must be IN_PROGRESS, COMPLETED, or INCOMPLETE" },
         { status: 400 }
       );
     }
@@ -54,14 +54,24 @@ export async function POST(
       );
     }
 
+    // Build update data based on status
+    const updateData: Record<string, unknown> = { status };
+
+    if (status === "IN_PROGRESS") {
+      // Starting progress - clear any previous completion data
+      updateData.completedAt = null;
+      updateData.completedById = null;
+      updateData.completedNote = null;
+    } else {
+      // COMPLETED or INCOMPLETE
+      updateData.completedAt = new Date();
+      updateData.completedById = session.id;
+      updateData.completedNote = note || null;
+    }
+
     const task = await prisma.task.update({
       where: { id },
-      data: {
-        status,
-        completedAt: new Date(),
-        completedById: session.id,
-        completedNote: note || null,
-      },
+      data: updateData,
       include: {
         category: true,
         house: {

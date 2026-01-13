@@ -23,9 +23,16 @@ interface Category {
   color: string;
 }
 
+interface User {
+  id: string;
+  name: string;
+  role: string;
+}
+
 interface TaskFiltersProps {
   houses: House[];
   categories: Category[];
+  users: User[];
   currentMonth: number;
   currentYear: number;
   currentFilters: {
@@ -33,6 +40,7 @@ interface TaskFiltersProps {
     categoryId?: string;
     houseId?: string;
     priority?: string;
+    assignedTo?: string;
   };
 }
 
@@ -44,6 +52,7 @@ const MONTHS = [
 export function TaskFilters({
   houses,
   categories,
+  users,
   currentMonth,
   currentYear,
   currentFilters,
@@ -100,7 +109,7 @@ export function TaskFilters({
     router.push(`/dashboard/tasks?${params.toString()}`);
   };
 
-  const hasActiveFilters = currentFilters.status || currentFilters.categoryId || currentFilters.houseId || currentFilters.priority;
+  const hasActiveFilters = currentFilters.status || currentFilters.categoryId || currentFilters.houseId || currentFilters.priority || currentFilters.assignedTo;
 
   const now = new Date();
   const isCurrentMonth = currentMonth === now.getMonth() + 1 && currentYear === now.getFullYear();
@@ -140,6 +149,7 @@ export function TaskFilters({
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="PENDING">Pending</SelectItem>
+              <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
               <SelectItem value="COMPLETED">Completed</SelectItem>
               <SelectItem value="APPROVED">Approved</SelectItem>
               <SelectItem value="INCOMPLETE">Incomplete</SelectItem>
@@ -199,6 +209,24 @@ export function TaskFilters({
               {houses.map((house) => (
                 <SelectItem key={house.id} value={house.id}>
                   {house.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Staff Filter */}
+          <Select
+            value={currentFilters.assignedTo || "all"}
+            onValueChange={(value) => updateFilter("assignedTo", value)}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Assigned To" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Staff</SelectItem>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name}
                 </SelectItem>
               ))}
             </SelectContent>

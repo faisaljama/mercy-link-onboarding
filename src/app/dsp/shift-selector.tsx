@@ -14,6 +14,7 @@ interface ShiftSelectorProps {
   selectedHouseId: string;
   selectedDate: string;
   selectedShift: string;
+  basePath?: string;
 }
 
 export function ShiftSelector({
@@ -21,6 +22,7 @@ export function ShiftSelector({
   selectedHouseId,
   selectedDate,
   selectedShift,
+  basePath = "/dsp",
 }: ShiftSelectorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,7 +30,7 @@ export function ShiftSelector({
   const updateParams = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set(key, value);
-    router.push(`/dsp?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   };
 
   const shifts = [

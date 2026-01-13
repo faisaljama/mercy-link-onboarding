@@ -25,6 +25,7 @@ interface SearchParams {
   categoryId?: string;
   houseId?: string;
   priority?: string;
+  assignedTo?: string;
 }
 
 async function getTasksData(
@@ -60,6 +61,12 @@ async function getTasksData(
 
   if (searchParams.priority) {
     where.priority = searchParams.priority;
+  }
+
+  if (searchParams.assignedTo) {
+    where.assignedUsers = {
+      some: { userId: searchParams.assignedTo },
+    };
   }
 
   const tasks = await prisma.task.findMany({
@@ -143,11 +150,12 @@ export default async function TasksPage({
   // Calculate stats
   const total = tasks.length;
   const pending = tasks.filter((t) => t.status === "PENDING").length;
+  const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS").length;
   const completed = tasks.filter((t) => t.status === "COMPLETED").length;
   const approved = tasks.filter((t) => t.status === "APPROVED").length;
   const incomplete = tasks.filter((t) => t.status === "INCOMPLETE").length;
   const overdue = tasks.filter(
-    (t) => t.status === "PENDING" && new Date(t.dueDate) < new Date()
+    (t) => (t.status === "PENDING" || t.status === "IN_PROGRESS") && new Date(t.dueDate) < new Date()
   ).length;
 
   const canCreate = session.role !== "LEAD_STAFF";
@@ -181,7 +189,7 @@ export default async function TasksPage({
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -201,6 +209,17 @@ export default async function TasksPage({
                 <p className="text-2xl font-bold text-blue-600">{pending}</p>
               </div>
               <Clock className="h-8 w-8 text-blue-200" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">In Progress</p>
+                <p className="text-2xl font-bold text-purple-600">{inProgress}</p>
+              </div>
+              <Clock className="h-8 w-8 text-purple-200" />
             </div>
           </CardContent>
         </Card>
@@ -254,6 +273,7 @@ export default async function TasksPage({
       <TaskFilters
         houses={houses}
         categories={categories}
+        users={users}
         currentMonth={month}
         currentYear={year}
         currentFilters={params}
@@ -275,7 +295,7 @@ export default async function TasksPage({
               <p className="text-sm">Create a new task to get started</p>
             </div>
           ) : (
-            <TaskTable tasks={tasks} userRole={session.role} />
+            <TaskTable tasks={tasks} userRole={session.role} userId={session.id} />
           )}
         </CardContent>
       </Card>
