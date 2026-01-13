@@ -22,6 +22,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { VoidActionButton } from "./void-action-button";
+import { SignActionButton } from "./sign-action-button";
 
 async function getCorrectiveAction(id: string) {
   const action = await prisma.correctiveAction.findUnique({
@@ -448,10 +449,20 @@ export default async function CorrectiveActionDetailPage({
                 ))
               )}
 
+              {/* Supervisor/Witness/HR can add their signature */}
+              {!isVoided && (
+                <SignActionButton
+                  actionId={id}
+                  existingSignerTypes={action.signatures.map(s => s.signerType)}
+                  userRole={session.role}
+                />
+              )}
+
+              {/* Link to send to employee for signature */}
               {action.status === "PENDING_SIGNATURE" && !isVoided && (
-                <Button asChild className="w-full">
+                <Button asChild variant="outline" className="w-full">
                   <Link href={`/dashboard/discipline/sign/${id}`}>
-                    Request Signature
+                    Employee Sign Link
                   </Link>
                 </Button>
               )}

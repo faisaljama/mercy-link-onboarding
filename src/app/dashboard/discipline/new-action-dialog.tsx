@@ -23,7 +23,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, AlertTriangle } from "lucide-react";
+import { Plus, Loader2, AlertTriangle, PenTool } from "lucide-react";
+import { SignaturePadComponent } from "@/components/signature-pad";
 
 interface House {
   id: string;
@@ -83,6 +84,7 @@ export function NewActionDialog({ houses, employees }: NewActionDialogProps) {
     consequencesText: "Further violations may result in additional disciplinary action up to and including termination of employment.",
     pipScheduled: false,
     pipDate: "",
+    supervisorSignature: null as string | null,
   });
 
   // Fetch categories on mount
@@ -157,6 +159,7 @@ export function NewActionDialog({ houses, employees }: NewActionDialogProps) {
         body: JSON.stringify({
           ...formData,
           pointsAdjusted: formData.hasMitigating ? formData.pointsAdjusted : null,
+          supervisorSignature: formData.supervisorSignature,
         }),
       });
 
@@ -196,6 +199,7 @@ export function NewActionDialog({ houses, employees }: NewActionDialogProps) {
       consequencesText: "Further violations may result in additional disciplinary action up to and including termination of employment.",
       pipScheduled: false,
       pipDate: "",
+      supervisorSignature: null,
     });
     setSelectedCategory(null);
     setEmployeePoints(null);
@@ -217,13 +221,13 @@ export function NewActionDialog({ houses, employees }: NewActionDialogProps) {
         <DialogHeader>
           <DialogTitle>New Corrective Action</DialogTitle>
           <DialogDescription>
-            Step {step} of 3: {step === 1 ? "Employee & Violation" : step === 2 ? "Incident Details" : "Review & Submit"}
+            Step {step} of 4: {step === 1 ? "Employee & Violation" : step === 2 ? "Incident Details" : step === 3 ? "Review" : "Supervisor Signature"}
           </DialogDescription>
         </DialogHeader>
 
         {/* Step indicators */}
         <div className="flex gap-2 mb-4">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div
               key={s}
               className={`flex-1 h-2 rounded-full ${
@@ -572,14 +576,50 @@ export function NewActionDialog({ houses, employees }: NewActionDialogProps) {
 
             <div className="flex justify-between pt-4">
               <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
-              <Button onClick={handleSubmit} disabled={loading}>
+              <Button onClick={() => setStep(4)}>Next: Sign Document</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Supervisor Signature */}
+        {step === 4 && (
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <PenTool className="h-5 w-5 text-blue-600" />
+                <h4 className="font-medium text-blue-900">Supervisor Signature Required</h4>
+              </div>
+              <p className="text-sm text-blue-700">
+                As the issuing supervisor, please sign below to confirm you have reviewed this corrective action with the employee.
+              </p>
+            </div>
+
+            <div className="border rounded-lg p-4 bg-white">
+              <Label className="mb-3 block">Your Signature</Label>
+              <SignaturePadComponent
+                onSignatureChange={(data) => setFormData((prev) => ({ ...prev, supervisorSignature: data }))}
+                width={400}
+                height={150}
+              />
+            </div>
+
+            {!formData.supervisorSignature && (
+              <p className="text-sm text-amber-600 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Signature is required to create the corrective action
+              </p>
+            )}
+
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={() => setStep(3)}>Back</Button>
+              <Button onClick={handleSubmit} disabled={loading || !formData.supervisorSignature}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating...
                   </>
                 ) : (
-                  "Create Corrective Action"
+                  "Create & Sign Corrective Action"
                 )}
               </Button>
             </div>
