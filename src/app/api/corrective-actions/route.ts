@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, getUserHouseIds } from "@/lib/auth";
-import { subDays } from "date-fns";
+import { subDays, format } from "date-fns";
+import { sendCorrectiveActionSignatureRequest } from "@/lib/email";
 
 // Helper: Calculate current points for an employee (rolling 90-day window)
 async function calculateCurrentPoints(employeeId: string): Promise<number> {
@@ -334,12 +335,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Send email notification to employee if they have an email address
+    if (employee.email) {
+      try {
+        await sendCorrectiveActionSignatureRequest({
+          employeeEmail: employee.email,
+          employeeName: `${employee.firstName} ${employee.lastName}`,
+          violationDate: format(new Date(violationDate), "MMMM d, yyyy"),
+          violationCategory: category.categoryName,
+          severityLevel: category.severityLevel,
+          pointsAssigned: newPoints,
+          issuedByName: session.name || "Management",
+          signLink: `/dashboard/discipline/sign/${action.id}`,
+        });
+      } catch (emailError) {
+        // Log but don't fail the request if email fails
+        console.error("Failed to send corrective action email:", emailError);
+      }
+    }
+
     return NextResponse.json({
       action,
       currentPoints,
       newPoints,
       totalPoints,
       thresholdsCrossed: thresholdNotifications,
+      emailSent: !!employee.email,
     }, { status: 201 });
   } catch (error) {
     console.error("Error creating corrective action:", error);

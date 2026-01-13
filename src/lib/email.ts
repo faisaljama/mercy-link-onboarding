@@ -221,6 +221,94 @@ export async function sendDailyDigestEmail(data: NotificationEmailData): Promise
   });
 }
 
+// Send corrective action signature request to employee
+export interface CorrectiveActionEmailData {
+  employeeEmail: string;
+  employeeName: string;
+  violationDate: string;
+  violationCategory: string;
+  severityLevel: string;
+  pointsAssigned: number;
+  issuedByName: string;
+  signLink: string;
+}
+
+export async function sendCorrectiveActionSignatureRequest(data: CorrectiveActionEmailData): Promise<boolean> {
+  const severityColors: Record<string, { bg: string; border: string; text: string }> = {
+    MINOR: { bg: "#dbeafe", border: "#3b82f6", text: "#1e40af" },
+    MODERATE: { bg: "#fef3c7", border: "#f59e0b", text: "#92400e" },
+    SERIOUS: { bg: "#fed7aa", border: "#f97316", text: "#9a3412" },
+    CRITICAL: { bg: "#fecaca", border: "#ef4444", text: "#991b1b" },
+    IMMEDIATE_TERMINATION: { bg: "#fecaca", border: "#dc2626", text: "#7f1d1d" },
+  };
+
+  const colors = severityColors[data.severityLevel] || severityColors.MODERATE;
+
+  const content = `
+    <h2 style="margin:0 0 16px;font-size:20px;font-weight:600;color:#0f172a;">
+      Corrective Action - Signature Required
+    </h2>
+    <p style="margin:0 0 24px;font-size:16px;color:#475569;">
+      Hello ${data.employeeName},
+    </p>
+    <p style="margin:0 0 24px;font-size:16px;color:#475569;">
+      A corrective action has been issued and requires your acknowledgment signature.
+    </p>
+
+    <div style="margin-bottom:24px;padding:20px;background-color:${colors.bg};border-left:4px solid ${colors.border};border-radius:4px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        <tr>
+          <td width="140" style="font-size:14px;color:#64748b;padding:4px 0;">Violation Date:</td>
+          <td style="font-size:14px;font-weight:500;color:#0f172a;padding:4px 0;">${data.violationDate}</td>
+        </tr>
+        <tr>
+          <td style="font-size:14px;color:#64748b;padding:4px 0;">Category:</td>
+          <td style="font-size:14px;font-weight:500;color:#0f172a;padding:4px 0;">${data.violationCategory}</td>
+        </tr>
+        <tr>
+          <td style="font-size:14px;color:#64748b;padding:4px 0;">Severity:</td>
+          <td style="font-size:14px;font-weight:600;color:${colors.text};padding:4px 0;">${data.severityLevel.replace("_", " ")}</td>
+        </tr>
+        <tr>
+          <td style="font-size:14px;color:#64748b;padding:4px 0;">Points:</td>
+          <td style="font-size:14px;font-weight:500;color:#0f172a;padding:4px 0;">${data.pointsAssigned}</td>
+        </tr>
+        <tr>
+          <td style="font-size:14px;color:#64748b;padding:4px 0;">Issued By:</td>
+          <td style="font-size:14px;font-weight:500;color:#0f172a;padding:4px 0;">${data.issuedByName}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="margin:0 0 24px;font-size:14px;color:#64748b;">
+      Please review the corrective action details and provide your signature. Your signature indicates acknowledgment of receipt, not necessarily agreement with the findings.
+    </p>
+
+    <table role="presentation" width="100%">
+      <tr>
+        <td align="center">
+          <a href="${APP_URL}${data.signLink}" style="display:inline-block;padding:14px 32px;background-color:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;border-radius:6px;font-size:16px;">
+            Review & Sign
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;text-align:center;">
+      If you have questions about this corrective action, please contact your supervisor or HR.
+    </p>
+  `;
+
+  const subject = `⚠️ Action Required: Corrective Action Signature Needed`;
+
+  return sendEmail({
+    to: data.employeeEmail,
+    subject,
+    html: wrapInTemplate(content, `Corrective action issued - your signature is required`),
+    text: `Corrective Action - Signature Required\n\nHello ${data.employeeName},\n\nA corrective action has been issued for ${data.violationCategory} (${data.violationDate}).\n\nPlease sign at: ${APP_URL}${data.signLink}`,
+  });
+}
+
 // Send immediate notification for urgent items
 export async function sendUrgentNotificationEmail(
   recipientEmail: string,
