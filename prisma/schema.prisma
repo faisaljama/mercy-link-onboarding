@@ -108,6 +108,7 @@ model User {
   shiftNotesReviewed         ShiftNote[]                 @relation("ShiftNoteReviewedBy")
   staffAssignmentsCreated    StaffResidentAssignment[]   @relation("StaffAssignmentCreatedBy")
   onboardingDocsUploaded     ResidentOnboardingDocument[] @relation("OnboardingDocUploadedBy")
+  notePromptsUpdated         ResidentNotePrompt[]        @relation("NotePromptUpdatedBy")
 }
 
 model UserHouse {
@@ -337,6 +338,7 @@ model Client {
   shiftNotes                ShiftNote[]
   staffAssignments          StaffResidentAssignment[]
   onboardingDocuments       ResidentOnboardingDocument[]
+  notePrompt                ResidentNotePrompt?
 }
 
 // Additional Healthcare Providers for clients
@@ -1749,6 +1751,19 @@ model ShiftNote {
   @@index([clientId, shiftDate])
   @@index([houseId, shiftDate])
   @@index([submittedById])
+}
+
+// Resident Note Prompt - ChatGPT prompt for each resident
+model ResidentNotePrompt {
+  id            String    @id @default(cuid())
+  clientId      String    @unique
+  promptText    String    @db.Text
+  updatedById   String
+  updatedAt     DateTime  @default(now()) @updatedAt
+  createdAt     DateTime  @default(now())
+
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  updatedBy     User      @relation("NotePromptUpdatedBy", fields: [updatedById], references: [id])
 }
 
 // Staff-Resident Assignments - tracks which DSPs work with which residents

@@ -39,6 +39,9 @@ import {
   StickyNote,
   IdCard,
   FileSignature,
+  Mic,
+  MessageSquare,
+  FileCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -106,6 +109,8 @@ const moreGroupedNavigation: NavGroup[] = [
     icon: Briefcase,
     items: [
       { name: "Daily Operations", href: "/dashboard/daily-operations", icon: ClipboardList },
+      { name: "Notes Review", href: "/dashboard/notes-review", icon: FileCheck },
+      { name: "ChatGPT Prompts", href: "/dashboard/resident-prompts", icon: MessageSquare },
       { name: "DC Checklist", href: "/dashboard/dc-checklist", icon: Eye },
       { name: "Weekly Reports", href: "/dashboard/weekly-reports", icon: FileBarChart },
       { name: "QA Checklist", href: "/dashboard/qa-checklist", icon: ClipboardCheck },
