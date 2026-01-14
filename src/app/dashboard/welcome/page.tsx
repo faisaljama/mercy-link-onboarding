@@ -132,7 +132,7 @@ const DC_FEATURES = [
   },
 ];
 
-const LEAD_STAFF_FEATURES = [
+const DSP_FEATURES = [
   {
     icon: ClipboardCheck,
     title: "Daily Operations",
@@ -191,7 +191,7 @@ function getFeaturesByRole(role: string) {
     case "DESIGNATED_COORDINATOR":
       return DC_FEATURES;
     default:
-      return LEAD_STAFF_FEATURES;
+      return DSP_FEATURES;
   }
 }
 
@@ -203,8 +203,8 @@ function getRoleTitle(role: string) {
       return "Designated Manager";
     case "DESIGNATED_COORDINATOR":
       return "Designated Coordinator";
-    case "LEAD_STAFF":
-      return "Lead Staff";
+    case "DSP":
+      return "DSP";
     default:
       return "Team Member";
   }

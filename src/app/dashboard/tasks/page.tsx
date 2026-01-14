@@ -158,7 +158,7 @@ export default async function TasksPage({
     (t) => (t.status === "PENDING" || t.status === "IN_PROGRESS") && new Date(t.dueDate) < new Date()
   ).length;
 
-  const canCreate = session.role !== "LEAD_STAFF";
+  const canCreate = session.role !== "DSP";
 
   return (
     <div className="space-y-6">

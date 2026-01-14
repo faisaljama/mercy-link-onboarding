@@ -118,8 +118,8 @@ function formatRoles(rolesJson: string) {
             return "Human Resources (HR)";
           case "FINANCE":
             return "Finance";
-          case "LEAD_STAFF":
-            return "Lead Staff (DSP)";
+          case "DSP":
+            return "DSP (DSP)";
           default:
             return r;
         }
@@ -151,7 +151,7 @@ export default async function TaskDetailPage({
   const isAdmin = session.role === "ADMIN";
   const canEdit = (isCreator || isAdmin) && task.status !== "APPROVED";
   const canApprove = session.role === "ADMIN" && task.status === "COMPLETED";
-  const canUpdateStatus = session.role !== "LEAD_STAFF" && (task.status === "PENDING" || task.status === "IN_PROGRESS");
+  const canUpdateStatus = session.role !== "DSP" && (task.status === "PENDING" || task.status === "IN_PROGRESS");
 
   return (
     <div className="space-y-6">

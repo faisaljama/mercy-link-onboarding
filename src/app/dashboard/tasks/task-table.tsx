@@ -122,7 +122,7 @@ function formatRoles(rolesJson: string) {
             return "HR";
           case "FINANCE":
             return "Finance";
-          case "LEAD_STAFF":
+          case "DSP":
             return "DSP";
           default:
             return r;
@@ -143,7 +143,7 @@ export function TaskTable({ tasks, userRole, userId }: TaskTableProps) {
 
   // Anyone can update task status (start progress, complete, incomplete)
   // But only creator and admin can edit task details
-  const canUpdateStatus = userRole !== "LEAD_STAFF";
+  const canUpdateStatus = userRole !== "DSP";
   const canApprove = userRole === "ADMIN";
   const canDelete = userRole === "ADMIN";
   const isAdmin = userRole === "ADMIN";

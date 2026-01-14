@@ -56,7 +56,7 @@ export async function PUT(
     }
 
     // Only admins and DCs can edit entries
-    if (session.role === "LEAD_STAFF") {
+    if (session.role === "DSP") {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

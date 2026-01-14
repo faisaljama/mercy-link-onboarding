@@ -403,7 +403,7 @@ export default async function EmployeeDetailPage({
                     itemName: i.itemName,
                     itemType: i.itemType,
                   }))}
-                  canDelete={session.role !== "LEAD_STAFF"}
+                  canDelete={session.role !== "DSP"}
                 />
               </TabsContent>
 

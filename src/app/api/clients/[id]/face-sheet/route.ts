@@ -12,8 +12,8 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only admins and DCs can update face sheets
-    if (session.role === "LEAD_STAFF") {
+    // Only admins and DCs can update face sheets (DSP cannot)
+    if (session.role === "DSP") {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

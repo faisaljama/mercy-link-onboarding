@@ -8,17 +8,17 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
   "/dashboard/audit-log": ["ADMIN"],
 
   // People Section
-  "/dashboard/clients": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE"],
+  "/dashboard/clients": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE", "HR"],
   "/dashboard/employees": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR"],
   "/dashboard/discipline": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR"],
   "/dashboard/register": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"],
 
   // Houses
-  "/dashboard/houses": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "FINANCE"],
+  "/dashboard/houses": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "FINANCE", "HR"],
 
   // Operations Section
   "/dashboard/daily-operations": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS"],
-  "/dashboard/notes-review": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"],
+  "/dashboard/notes-review": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"],
   "/dashboard/resident-prompts": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"],
   "/dashboard/dc-checklist": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"],
   "/dashboard/weekly-reports": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS"],
@@ -35,26 +35,26 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
   "/dashboard/billing/reconciliation": ["ADMIN", "FINANCE"],
   "/dashboard/billing/attendance": ["ADMIN", "FINANCE"],
   "/dashboard/billing/reports": ["ADMIN", "FINANCE"],
-  "/dashboard/rent": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE"],
-  "/dashboard/expenses": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE"],
+  "/dashboard/rent": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE", "HR"],
+  "/dashboard/expenses": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE", "HR"],
 
   // Resources Section
-  "/dashboard/resources": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF"],
-  "/dashboard/documents": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF"],
+  "/dashboard/resources": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"],
+  "/dashboard/documents": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"],
 
   // DSP Portal - accessible by all except HR and FINANCE (who don't do direct care)
-  "/dsp": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"],
-  "/dsp/chores": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"],
-  "/dsp/shift-notes": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"],
-  "/dsp/notes": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"],
-  "/dsp/residents": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"],
-  "/dsp/documents": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"],
+  "/dsp": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"],
+  "/dsp/chores": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"],
+  "/dsp/shift-notes": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"],
+  "/dsp/notes": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"],
+  "/dsp/residents": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"],
+  "/dsp/documents": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"],
 
   // General - accessible by all authenticated users
-  "/dashboard": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF"],
-  "/dashboard/welcome": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF", "DSP"],
-  "/dashboard/calendar": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF"],
-  "/dashboard/notifications": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF", "DSP"],
+  "/dashboard": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"],
+  "/dashboard/welcome": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "DSP"],
+  "/dashboard/calendar": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"],
+  "/dashboard/notifications": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "DSP"],
 };
 
 // Sidebar menu configuration with role access
@@ -84,13 +84,13 @@ export const SIDEBAR_CONFIG: {
       name: "Welcome",
       href: "/dashboard/welcome",
       icon: "Sparkles",
-      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF", "DSP"],
+      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "DSP"],
     },
     {
       name: "Dashboard",
       href: "/dashboard",
       icon: "LayoutDashboard",
-      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF"],
+      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"],
     },
   ],
 
@@ -100,7 +100,7 @@ export const SIDEBAR_CONFIG: {
       icon: "Users",
       roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "FINANCE"],
       items: [
-        { name: "Clients", href: "/dashboard/clients", icon: "Users", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE"] },
+        { name: "Clients", href: "/dashboard/clients", icon: "Users", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE", "HR"] },
         { name: "Employees", href: "/dashboard/employees", icon: "UserCog", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR"] },
         { name: "Discipline", href: "/dashboard/discipline", icon: "Scale", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR"] },
         { name: "Register", href: "/dashboard/register", icon: "ClipboardCheck", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"] },
@@ -109,31 +109,31 @@ export const SIDEBAR_CONFIG: {
     {
       name: "DSP Portal",
       icon: "Briefcase",
-      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"],
+      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"],
       items: [
-        { name: "My Dashboard", href: "/dsp", icon: "LayoutDashboard", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"] },
-        { name: "Chores", href: "/dsp/chores", icon: "CheckSquare", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"] },
-        { name: "Shift Notes", href: "/dsp/shift-notes", icon: "StickyNote", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"] },
-        { name: "Progress Notes", href: "/dsp/notes", icon: "FileText", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"] },
-        { name: "Residents", href: "/dsp/residents", icon: "IdCard", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"] },
-        { name: "DSP Documents", href: "/dsp/documents", icon: "FileSignature", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"] },
+        { name: "My Dashboard", href: "/dsp", icon: "LayoutDashboard", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"] },
+        { name: "Chores", href: "/dsp/chores", icon: "CheckSquare", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"] },
+        { name: "Shift Notes", href: "/dsp/shift-notes", icon: "StickyNote", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"] },
+        { name: "Progress Notes", href: "/dsp/notes", icon: "FileText", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"] },
+        { name: "Residents", href: "/dsp/residents", icon: "IdCard", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"] },
+        { name: "DSP Documents", href: "/dsp/documents", icon: "FileSignature", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"] },
       ],
     },
     {
       name: "Houses",
       icon: "Home",
-      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "FINANCE"],
+      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "FINANCE", "HR"],
       items: [
-        { name: "Houses", href: "/dashboard/houses", icon: "Home", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "FINANCE"] },
+        { name: "Houses", href: "/dashboard/houses", icon: "Home", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "FINANCE", "HR"] },
       ],
     },
     {
       name: "Operations",
       icon: "ClipboardList",
-      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"],
+      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"],
       items: [
         { name: "Daily Operations", href: "/dashboard/daily-operations", icon: "ClipboardList", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS"] },
-        { name: "Notes Review", href: "/dashboard/notes-review", icon: "FileCheck", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "LEAD_STAFF", "DSP"] },
+        { name: "Notes Review", href: "/dashboard/notes-review", icon: "FileCheck", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "DSP"] },
         { name: "ChatGPT Prompts", href: "/dashboard/resident-prompts", icon: "MessageSquare", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"] },
         { name: "DC Checklist", href: "/dashboard/dc-checklist", icon: "Eye", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"] },
         { name: "Weekly Reports", href: "/dashboard/weekly-reports", icon: "FileBarChart", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS"] },
@@ -148,22 +148,22 @@ export const SIDEBAR_CONFIG: {
     {
       name: "Finance",
       icon: "Wallet",
-      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE"],
+      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE", "HR"],
       items: [
         { name: "Billing", href: "/dashboard/billing", icon: "FileText", roles: ["ADMIN", "FINANCE"] },
         { name: "Accounts Receivable", href: "/dashboard/billing/accounts-receivable", icon: "DollarSign", roles: ["ADMIN", "FINANCE"] },
         { name: "Reconciliation", href: "/dashboard/billing/reconciliation", icon: "Receipt", roles: ["ADMIN", "FINANCE"] },
-        { name: "Rent", href: "/dashboard/rent", icon: "DollarSign", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE"] },
-        { name: "Expenses", href: "/dashboard/expenses", icon: "Receipt", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE"] },
+        { name: "Rent", href: "/dashboard/rent", icon: "DollarSign", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE", "HR"] },
+        { name: "Expenses", href: "/dashboard/expenses", icon: "Receipt", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE", "HR"] },
       ],
     },
     {
       name: "Resources",
       icon: "BookOpen",
-      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF"],
+      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"],
       items: [
-        { name: "Resource Hub", href: "/dashboard/resources", icon: "BookOpen", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF"] },
-        { name: "Documents", href: "/dashboard/documents", icon: "FileText", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF"] },
+        { name: "Resource Hub", href: "/dashboard/resources", icon: "BookOpen", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"] },
+        { name: "Documents", href: "/dashboard/documents", icon: "FileText", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"] },
       ],
     },
   ],
@@ -173,13 +173,13 @@ export const SIDEBAR_CONFIG: {
       name: "Calendar",
       href: "/dashboard/calendar",
       icon: "Calendar",
-      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF"],
+      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"],
     },
     {
       name: "Notifications",
       href: "/dashboard/notifications",
       icon: "Bell",
-      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "LEAD_STAFF", "DSP"],
+      roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE", "DSP"],
     },
   ],
 
@@ -237,6 +237,5 @@ export const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
   HR: "HR",
   OPERATIONS: "Operations",
   FINANCE: "Finance",
-  LEAD_STAFF: "Lead Staff",
   DSP: "DSP",
 };

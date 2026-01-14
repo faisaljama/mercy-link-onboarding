@@ -85,7 +85,7 @@ async function getFireDrillData(houseIds: string[]) {
   const employees = await prisma.user.findMany({
     where: {
       role: {
-        in: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "LEAD_STAFF"],
+        in: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "DSP"],
       },
     },
     orderBy: { name: "asc" },

@@ -14,7 +14,7 @@ export async function POST(
     }
 
     // Only Admin, DM, and DC can complete tasks
-    if (session.role === "LEAD_STAFF") {
+    if (session.role === "DSP") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

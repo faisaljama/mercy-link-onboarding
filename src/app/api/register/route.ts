@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only admins and DCs can create entries
-    if (session.role === "LEAD_STAFF") {
+    if (session.role === "DSP") {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

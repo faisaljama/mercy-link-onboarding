@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name,
-        role: role || "LEAD_STAFF",
+        role: role || "DSP",
       },
       select: {
         id: true,
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         details: JSON.stringify({
           email,
           name,
-          role: role || "LEAD_STAFF",
+          role: role || "DSP",
           houseIds,
         }),
       },

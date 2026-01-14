@@ -184,7 +184,7 @@ export async function DELETE(
     }
 
     // Only admins and coordinators can delete
-    if (session.role === "LEAD_STAFF") {
+    if (session.role === "DSP") {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

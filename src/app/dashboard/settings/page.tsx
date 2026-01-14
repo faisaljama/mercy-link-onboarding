@@ -51,7 +51,15 @@ function getRoleBadgeColor(role: string) {
       return "bg-red-100 text-red-800";
     case "DESIGNATED_COORDINATOR":
       return "bg-purple-100 text-purple-800";
-    case "LEAD_STAFF":
+    case "DESIGNATED_MANAGER":
+      return "bg-indigo-100 text-indigo-800";
+    case "HR":
+      return "bg-pink-100 text-pink-800";
+    case "OPERATIONS":
+      return "bg-orange-100 text-orange-800";
+    case "FINANCE":
+      return "bg-green-100 text-green-800";
+    case "DSP":
       return "bg-blue-100 text-blue-800";
     default:
       return "bg-slate-100 text-slate-800";
@@ -64,8 +72,16 @@ function formatRole(role: string) {
       return "Admin";
     case "DESIGNATED_COORDINATOR":
       return "Designated Coordinator";
-    case "LEAD_STAFF":
-      return "Lead Staff";
+    case "DESIGNATED_MANAGER":
+      return "Designated Manager";
+    case "HR":
+      return "HR";
+    case "OPERATIONS":
+      return "Operations";
+    case "FINANCE":
+      return "Finance";
+    case "DSP":
+      return "DSP";
     default:
       return role;
   }
@@ -85,7 +101,7 @@ export default async function SettingsPage() {
   // Stats
   const adminCount = users.filter((u) => u.role === "ADMIN").length;
   const dcCount = users.filter((u) => u.role === "DESIGNATED_COORDINATOR").length;
-  const staffCount = users.filter((u) => u.role === "LEAD_STAFF").length;
+  const dspCount = users.filter((u) => u.role === "DSP").length;
 
   return (
     <div className="space-y-6">
@@ -143,8 +159,8 @@ export default async function SettingsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Lead Staff</p>
-                <p className="text-2xl font-bold">{staffCount}</p>
+                <p className="text-sm text-slate-500">DSP</p>
+                <p className="text-2xl font-bold">{dspCount}</p>
               </div>
               <Users className="h-8 w-8 text-green-200" />
             </div>

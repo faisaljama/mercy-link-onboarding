@@ -14,7 +14,7 @@ export async function PUT(
     }
 
     // Only Admin, DM, and DC can update categories
-    if (session.role === "LEAD_STAFF") {
+    if (session.role === "DSP") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

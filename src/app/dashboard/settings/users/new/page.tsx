@@ -34,7 +34,7 @@ export default function NewUserPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "LEAD_STAFF",
+    role: "DSP",
     houseIds: [] as string[],
   });
 
@@ -193,7 +193,7 @@ export default function NewUserPage() {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="LEAD_STAFF">Lead Staff (DSP)</SelectItem>
+                    <SelectItem value="DSP">DSP (Direct Support Professional)</SelectItem>
                     <SelectItem value="DESIGNATED_COORDINATOR">Designated Coordinator (DC)</SelectItem>
                     <SelectItem value="DESIGNATED_MANAGER">Designated Manager (DM)</SelectItem>
                     <SelectItem value="OPERATIONS">Operations</SelectItem>
@@ -207,9 +207,9 @@ export default function NewUserPage() {
                   {formData.role === "DESIGNATED_MANAGER" && "Manager-level access for assigned houses"}
                   {formData.role === "DESIGNATED_COORDINATOR" && "Coordinator access for managing compliance"}
                   {formData.role === "OPERATIONS" && "Operations team member access"}
-                  {formData.role === "HR" && "Human Resources access"}
+                  {formData.role === "HR" && "Human Resources access - Employees, Discipline, Clients, Houses"}
                   {formData.role === "FINANCE" && "Finance and billing access"}
-                  {formData.role === "LEAD_STAFF" && "Lead Staff can view assigned houses"}
+                  {formData.role === "DSP" && "DSP Portal access for assigned houses"}
                 </p>
               </div>
             </CardContent>

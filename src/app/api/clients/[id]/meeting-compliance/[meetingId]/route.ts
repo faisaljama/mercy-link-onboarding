@@ -153,8 +153,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only admins and DCs can delete
-    if (session.role === "LEAD_STAFF") {
+    // Only admins and DCs can delete (DSP cannot)
+    if (session.role === "DSP") {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

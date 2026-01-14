@@ -126,7 +126,7 @@ export default async function QAChecklistDetailPage({
   const naCount = items.filter((i) => i.value === "NA").length;
   const incompleteCount = items.filter((i) => !i.value).length;
 
-  const canEdit = session.role !== "LEAD_STAFF";
+  const canEdit = session.role !== "DSP";
 
   return (
     <div className="space-y-6">

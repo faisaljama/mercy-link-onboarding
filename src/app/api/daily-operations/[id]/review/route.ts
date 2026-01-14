@@ -13,7 +13,7 @@ export async function POST(
     }
 
     // Only admins and coordinators can review
-    if (session.role === "LEAD_STAFF") {
+    if (session.role === "DSP") {
       return NextResponse.json(
         { error: "Only administrators and coordinators can review reports" },
         { status: 403 }

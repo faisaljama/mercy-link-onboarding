@@ -30,7 +30,7 @@ interface SignActionButtonProps {
 
 const SIGNER_TYPES = [
   { value: "SUPERVISOR", label: "Supervisor", roles: ["ADMIN", "HR", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"] },
-  { value: "WITNESS", label: "Witness", roles: ["ADMIN", "HR", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "LEAD_STAFF"] },
+  { value: "WITNESS", label: "Witness", roles: ["ADMIN", "HR", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "DSP"] },
   { value: "HR", label: "HR Representative", roles: ["ADMIN", "HR"] },
 ];
 

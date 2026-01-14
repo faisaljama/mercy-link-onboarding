@@ -13,7 +13,7 @@ export async function POST(
     }
 
     // Only DCs and Admins can sign off
-    if (session.role === "LEAD_STAFF") {
+    if (session.role === "DSP") {
       return NextResponse.json(
         { error: "Only Designated Coordinators and Admins can sign off on rent payments" },
         { status: 403 }

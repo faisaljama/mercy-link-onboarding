@@ -98,7 +98,7 @@ function formatRoles(rolesJson: string) {
             return "HR";
           case "FINANCE":
             return "Finance";
-          case "LEAD_STAFF":
+          case "DSP":
             return "DSP";
           default:
             return r;
