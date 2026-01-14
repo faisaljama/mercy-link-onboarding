@@ -32,7 +32,7 @@ interface House {
 interface Payment {
   id: string;
   paymentNumber: string | null;
-  paymentDate: Date;
+  paymentDate: string;
   totalAmount: unknown;
 }
 

@@ -216,7 +216,15 @@ export default async function ReconciliationPage({
         </div>
         <div className="flex items-center gap-2">
           <NewPaymentDialog houses={houses} />
-          <NewReconciliationDialog houses={houses} payments={payments} />
+          <NewReconciliationDialog
+            houses={houses}
+            payments={payments.map((p) => ({
+              id: p.id,
+              paymentNumber: p.paymentNumber,
+              paymentDate: p.paymentDate.toISOString(),
+              totalAmount: p.totalAmount,
+            }))}
+          />
         </div>
       </div>
 
