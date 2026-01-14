@@ -268,6 +268,7 @@ model Client {
   hasGuardian       Boolean   @default(false)
   guardianName      String?
   guardianPhone     String?
+  guardianEmail     String?
   guardianAddress   String?
   guardianRelationship String?
 

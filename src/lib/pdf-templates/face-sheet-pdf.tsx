@@ -5,6 +5,7 @@ import {
   Text,
   View,
   StyleSheet,
+  Image,
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import {
@@ -69,6 +70,7 @@ interface ClientData {
   guardianName?: string | null;
   guardianRelationship?: string | null;
   guardianPhone?: string | null;
+  guardianEmail?: string | null;
   guardianAddress?: string | null;
   hasRepPayee: boolean;
   repPayeeName?: string | null;
@@ -148,6 +150,30 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  clientHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  clientPhoto: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    objectFit: "cover",
+  },
+  clientPhotoPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#dbeafe",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clientPhotoInitials: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#2563eb",
   },
   clientName: {
     fontSize: 18,
@@ -405,9 +431,20 @@ export function FaceSheetPDF({ client, isInternal = false }: FaceSheetPDFProps) 
 
         {/* Client Header */}
         <View style={styles.clientHeader}>
-          <View>
-            <Text style={styles.clientName}>{fullName}</Text>
-            <Text style={styles.clientHouse}>{client.house.name}</Text>
+          <View style={styles.clientHeaderLeft}>
+            {client.photoUrl ? (
+              <Image src={client.photoUrl} style={styles.clientPhoto} />
+            ) : (
+              <View style={styles.clientPhotoPlaceholder}>
+                <Text style={styles.clientPhotoInitials}>
+                  {client.firstName.charAt(0)}{client.lastName.charAt(0)}
+                </Text>
+              </View>
+            )}
+            <View>
+              <Text style={styles.clientName}>{fullName}</Text>
+              <Text style={styles.clientHouse}>{client.house.name}</Text>
+            </View>
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text
@@ -558,6 +595,9 @@ export function FaceSheetPDF({ client, isInternal = false }: FaceSheetPDFProps) 
                     )}
                     {client.guardianPhone && (
                       <Text style={styles.contactDetail}>{formatPhone(client.guardianPhone)}</Text>
+                    )}
+                    {client.guardianEmail && (
+                      <Text style={styles.contactDetail}>{client.guardianEmail}</Text>
                     )}
                     {client.guardianAddress && (
                       <Text style={styles.contactDetail}>{client.guardianAddress}</Text>

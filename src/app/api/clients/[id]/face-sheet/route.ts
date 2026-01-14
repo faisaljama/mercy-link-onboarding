@@ -48,6 +48,7 @@ export async function PUT(
       hasGuardian,
       guardianName,
       guardianPhone,
+      guardianEmail,
       guardianAddress,
       guardianRelationship,
       // Rep Payee
@@ -133,6 +134,7 @@ export async function PUT(
         hasGuardian: hasGuardian || false,
         guardianName: guardianName || null,
         guardianPhone: guardianPhone || null,
+        guardianEmail: guardianEmail || null,
         guardianAddress: guardianAddress || null,
         guardianRelationship: guardianRelationship || null,
         // Rep Payee

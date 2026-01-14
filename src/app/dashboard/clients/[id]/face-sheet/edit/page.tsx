@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Loader2, User, Shield, AlertCircle, Stethoscope, Heart, UserCheck, DollarSign, Users, Monitor, Plus, Trash2, Briefcase } from "lucide-react";
+import { ArrowLeft, Loader2, User, Shield, AlertCircle, Stethoscope, Heart, UserCheck, DollarSign, Users, Monitor, Plus, Trash2, Briefcase, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +24,47 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { formatPhoneInput } from "@/lib/format-phone";
+
+// Common diagnoses for developmental disabilities and mental health
+const DIAGNOSIS_OPTIONS = [
+  // Developmental Disabilities
+  { value: "Intellectual Disability", category: "Developmental" },
+  { value: "Autism Spectrum Disorder", category: "Developmental" },
+  { value: "Down Syndrome", category: "Developmental" },
+  { value: "Cerebral Palsy", category: "Developmental" },
+  { value: "Fetal Alcohol Spectrum Disorder", category: "Developmental" },
+  { value: "Developmental Delay", category: "Developmental" },
+  { value: "Fragile X Syndrome", category: "Developmental" },
+  // Mental Health
+  { value: "Schizophrenia", category: "Mental Health" },
+  { value: "Schizoaffective Disorder", category: "Mental Health" },
+  { value: "Bipolar Disorder", category: "Mental Health" },
+  { value: "Major Depressive Disorder", category: "Mental Health" },
+  { value: "Generalized Anxiety Disorder", category: "Mental Health" },
+  { value: "Post-Traumatic Stress Disorder (PTSD)", category: "Mental Health" },
+  { value: "Obsessive-Compulsive Disorder (OCD)", category: "Mental Health" },
+  { value: "Borderline Personality Disorder", category: "Mental Health" },
+  { value: "ADHD", category: "Mental Health" },
+  // Neurological
+  { value: "Epilepsy/Seizure Disorder", category: "Neurological" },
+  { value: "Traumatic Brain Injury", category: "Neurological" },
+  { value: "Dementia", category: "Neurological" },
+  // Medical
+  { value: "Diabetes Type 1", category: "Medical" },
+  { value: "Diabetes Type 2", category: "Medical" },
+  { value: "Hypertension", category: "Medical" },
+  { value: "Heart Disease", category: "Medical" },
+  { value: "Chronic Kidney Disease", category: "Medical" },
+  { value: "Asthma", category: "Medical" },
+  { value: "COPD", category: "Medical" },
+  // Sensory
+  { value: "Visual Impairment", category: "Sensory" },
+  { value: "Hearing Impairment", category: "Sensory" },
+  { value: "Deaf-Blindness", category: "Sensory" },
+];
 
 interface ClientProvider {
   id: string;
@@ -73,6 +112,7 @@ interface Client {
   hasGuardian: boolean;
   guardianName: string | null;
   guardianPhone: string | null;
+  guardianEmail: string | null;
   guardianAddress: string | null;
   guardianRelationship: string | null;
   hasRepPayee: boolean;
@@ -174,6 +214,7 @@ export default function EditFaceSheetPage({
     hasGuardian: false,
     guardianName: "",
     guardianPhone: "",
+    guardianEmail: "",
     guardianAddress: "",
     guardianRelationship: "",
     // Rep Payee
@@ -267,6 +308,7 @@ export default function EditFaceSheetPage({
           hasGuardian: data.client.hasGuardian || false,
           guardianName: data.client.guardianName || "",
           guardianPhone: data.client.guardianPhone || "",
+          guardianEmail: data.client.guardianEmail || "",
           guardianAddress: data.client.guardianAddress || "",
           guardianRelationship: data.client.guardianRelationship || "",
           // Rep Payee
@@ -592,42 +634,56 @@ export default function EditFaceSheetPage({
                 </Label>
               </div>
               {formData.hasGuardian && (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 pl-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="guardianName">Guardian Name</Label>
-                    <Input
-                      id="guardianName"
-                      value={formData.guardianName}
-                      onChange={(e) => updateField("guardianName", e.target.value)}
-                      placeholder="Full name"
-                    />
+                <div className="space-y-4 pl-6">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="guardianName">Guardian Name</Label>
+                      <Input
+                        id="guardianName"
+                        value={formData.guardianName}
+                        onChange={(e) => updateField("guardianName", e.target.value)}
+                        placeholder="Full name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="guardianRelationship">Relationship</Label>
+                      <Input
+                        id="guardianRelationship"
+                        value={formData.guardianRelationship}
+                        onChange={(e) => updateField("guardianRelationship", e.target.value)}
+                        placeholder="e.g., Parent, Sibling"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="guardianPhone">Phone</Label>
+                      <Input
+                        id="guardianPhone"
+                        value={formData.guardianPhone}
+                        onChange={(e) => updateField("guardianPhone", formatPhoneInput(e.target.value))}
+                        placeholder="###-###-####"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="guardianRelationship">Relationship</Label>
-                    <Input
-                      id="guardianRelationship"
-                      value={formData.guardianRelationship}
-                      onChange={(e) => updateField("guardianRelationship", e.target.value)}
-                      placeholder="e.g., Parent, Sibling"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="guardianPhone">Phone</Label>
-                    <Input
-                      id="guardianPhone"
-                      value={formData.guardianPhone}
-                      onChange={(e) => updateField("guardianPhone", formatPhoneInput(e.target.value))}
-                      placeholder="###-###-####"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="guardianAddress">Address</Label>
-                    <Input
-                      id="guardianAddress"
-                      value={formData.guardianAddress}
-                      onChange={(e) => updateField("guardianAddress", e.target.value)}
-                      placeholder="Full address"
-                    />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="guardianEmail">Email</Label>
+                      <Input
+                        id="guardianEmail"
+                        type="email"
+                        value={formData.guardianEmail}
+                        onChange={(e) => updateField("guardianEmail", e.target.value)}
+                        placeholder="guardian@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="guardianAddress">Address</Label>
+                      <Input
+                        id="guardianAddress"
+                        value={formData.guardianAddress}
+                        onChange={(e) => updateField("guardianAddress", e.target.value)}
+                        placeholder="Full address"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -1519,13 +1575,82 @@ export default function EditFaceSheetPage({
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="diagnoses">Diagnoses</Label>
-                <Textarea
-                  id="diagnoses"
-                  value={formData.diagnoses}
-                  onChange={(e) => updateField("diagnoses", e.target.value)}
-                  placeholder="List diagnoses..."
-                  rows={4}
+                <Label>Diagnoses</Label>
+                <Select
+                  value=""
+                  onValueChange={(value) => {
+                    const currentDiagnoses = formData.diagnoses
+                      ? formData.diagnoses.split(", ").filter(Boolean)
+                      : [];
+                    if (!currentDiagnoses.includes(value)) {
+                      const newDiagnoses = [...currentDiagnoses, value].join(", ");
+                      updateField("diagnoses", newDiagnoses);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select diagnoses to add..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Developmental", "Mental Health", "Neurological", "Medical", "Sensory"].map((category) => (
+                      <div key={category}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50">
+                          {category}
+                        </div>
+                        {DIAGNOSIS_OPTIONS.filter((d) => d.category === category).map((diagnosis) => (
+                          <SelectItem key={diagnosis.value} value={diagnosis.value}>
+                            {diagnosis.value}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex flex-wrap gap-2 mt-2 min-h-[60px] p-2 border rounded-md bg-slate-50">
+                  {formData.diagnoses ? (
+                    formData.diagnoses.split(", ").filter(Boolean).map((diagnosis) => (
+                      <Badge
+                        key={diagnosis}
+                        variant="secondary"
+                        className="flex items-center gap-1 pr-1"
+                      >
+                        {diagnosis}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentDiagnoses = formData.diagnoses
+                              .split(", ")
+                              .filter((d) => d !== diagnosis);
+                            updateField("diagnoses", currentDiagnoses.join(", "));
+                          }}
+                          className="ml-1 rounded-full hover:bg-slate-300 p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-400">No diagnoses selected</span>
+                  )}
+                </div>
+                <Input
+                  placeholder="Or type custom diagnosis and press Enter..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const value = e.currentTarget.value.trim();
+                      if (value) {
+                        const currentDiagnoses = formData.diagnoses
+                          ? formData.diagnoses.split(", ").filter(Boolean)
+                          : [];
+                        if (!currentDiagnoses.includes(value)) {
+                          const newDiagnoses = [...currentDiagnoses, value].join(", ");
+                          updateField("diagnoses", newDiagnoses);
+                        }
+                        e.currentTarget.value = "";
+                      }
+                    }
+                  }}
                 />
               </div>
               <div className="space-y-2">

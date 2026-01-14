@@ -440,6 +440,9 @@ export default async function FaceSheetPage({
                         {formatPhoneNumber(client.guardianPhone)}
                       </p>
                     )}
+                    {client.guardianEmail && (
+                      <p className="text-sm text-slate-600 mt-1">{client.guardianEmail}</p>
+                    )}
                     {client.guardianAddress && (
                       <p className="text-sm text-slate-500 mt-1">{client.guardianAddress}</p>
                     )}
@@ -689,9 +692,17 @@ export default async function FaceSheetPage({
               <div>
                 <p className="text-sm font-medium text-slate-700 mb-2">Diagnoses</p>
                 <div className="p-3 bg-blue-50 rounded-lg min-h-[60px] print:bg-slate-50">
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap">
-                    {client.diagnoses || "None documented"}
-                  </p>
+                  {client.diagnoses ? (
+                    <div className="flex flex-wrap gap-2">
+                      {client.diagnoses.split(", ").filter(Boolean).map((diagnosis, index) => (
+                        <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
+                          {diagnosis}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">None documented</p>
+                  )}
                 </div>
               </div>
               <div>

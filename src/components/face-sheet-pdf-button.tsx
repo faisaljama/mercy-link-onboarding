@@ -49,6 +49,7 @@ interface ClientData {
   guardianName?: string | null;
   guardianRelationship?: string | null;
   guardianPhone?: string | null;
+  guardianEmail?: string | null;
   guardianAddress?: string | null;
   hasRepPayee: boolean;
   repPayeeName?: string | null;
