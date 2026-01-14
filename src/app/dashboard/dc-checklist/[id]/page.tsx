@@ -39,7 +39,8 @@ export default async function ChecklistDetailPage({
   // Determine edit/delete permissions
   const isAdmin = session.role === "ADMIN" || session.role === "HR";
   const isOwner = checklist.createdById === session.id;
-  const canEdit = isAdmin || isOwner;
+  // Can only edit if not yet submitted, or if admin/owner viewing a submitted one (read-only)
+  const canEdit = (isAdmin || isOwner) && !checklist.isSubmitted;
   const canDelete = isAdmin || isOwner;
 
   return (

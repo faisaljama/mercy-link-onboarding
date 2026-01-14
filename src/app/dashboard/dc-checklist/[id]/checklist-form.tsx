@@ -22,6 +22,8 @@ import {
   Wrench,
   AlertTriangle,
   Trash2,
+  CheckCircle2,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -95,6 +97,8 @@ interface Checklist {
   onsiteSnowRemoval: boolean;
   onsiteStaffCoaching: boolean;
   onsiteMailVoicemail: boolean;
+  isSubmitted: boolean;
+  submittedAt: Date | null;
 }
 
 const REMOTE_TASKS = [
@@ -177,8 +181,11 @@ interface ChecklistFormProps {
 export function ChecklistForm({ checklist, canEdit = true, canDelete = false }: ChecklistFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState(checklist);
+
+  const isAlreadySubmitted = checklist.isSubmitted;
 
   const handleCheckboxChange = (key: string, checked: boolean) => {
     setFormData((prev) => ({
@@ -215,6 +222,38 @@ export function ChecklistForm({ checklist, canEdit = true, canDelete = false }: 
       alert("Failed to save checklist");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!confirm("Are you sure you want to submit this checklist? Once submitted, it will appear in the completed list and cannot be edited.")) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch(`/api/dc-checklist/${checklist.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          isSubmitted: true,
+          submittedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.error || "Failed to submit checklist");
+        return;
+      }
+
+      router.push("/dashboard/dc-checklist");
+      router.refresh();
+    } catch {
+      alert("Failed to submit checklist");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -306,6 +345,12 @@ export function ChecklistForm({ checklist, canEdit = true, canDelete = false }: 
                   Onsite Visit
                 </Badge>
               )}
+              {isAlreadySubmitted && (
+                <Badge className="bg-green-100 text-green-700">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Submitted
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -314,18 +359,24 @@ export function ChecklistForm({ checklist, canEdit = true, canDelete = false }: 
             <Button
               variant="outline"
               onClick={handleDelete}
-              disabled={deleting || loading}
+              disabled={deleting || loading || submitting}
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               {deleting ? "Deleting..." : "Delete"}
             </Button>
           )}
-          {canEdit && (
-            <Button onClick={handleSave} disabled={loading || deleting}>
-              <Save className="h-4 w-4 mr-2" />
-              {loading ? "Saving..." : "Save Checklist"}
-            </Button>
+          {canEdit && !isAlreadySubmitted && (
+            <>
+              <Button variant="outline" onClick={handleSave} disabled={loading || deleting || submitting}>
+                <Save className="h-4 w-4 mr-2" />
+                {loading ? "Saving..." : "Save Draft"}
+              </Button>
+              <Button onClick={handleSubmit} disabled={loading || deleting || submitting} className="bg-green-600 hover:bg-green-700">
+                <Send className="h-4 w-4 mr-2" />
+                {submitting ? "Submitting..." : "Submit Checklist"}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -456,7 +507,7 @@ export function ChecklistForm({ checklist, canEdit = true, canDelete = false }: 
           <Button
             variant="outline"
             onClick={handleDelete}
-            disabled={deleting || loading}
+            disabled={deleting || loading || submitting}
             size="lg"
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
@@ -464,11 +515,17 @@ export function ChecklistForm({ checklist, canEdit = true, canDelete = false }: 
             {deleting ? "Deleting..." : "Delete Checklist"}
           </Button>
         )}
-        {canEdit && (
-          <Button onClick={handleSave} disabled={loading || deleting} size="lg">
-            <Save className="h-4 w-4 mr-2" />
-            {loading ? "Saving..." : "Save Checklist"}
-          </Button>
+        {canEdit && !isAlreadySubmitted && (
+          <>
+            <Button variant="outline" onClick={handleSave} disabled={loading || deleting || submitting} size="lg">
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? "Saving..." : "Save Draft"}
+            </Button>
+            <Button onClick={handleSubmit} disabled={loading || deleting || submitting} size="lg" className="bg-green-600 hover:bg-green-700">
+              <Send className="h-4 w-4 mr-2" />
+              {submitting ? "Submitting..." : "Submit Checklist"}
+            </Button>
+          </>
         )}
       </div>
     </div>

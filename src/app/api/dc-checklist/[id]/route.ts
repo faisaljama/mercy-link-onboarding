@@ -130,6 +130,8 @@ export async function PUT(
       notes: data.notes,
       followUpItems: data.followUpItems,
       issuesIdentified: data.issuesIdentified,
+      isSubmitted: data.isSubmitted,
+      submittedAt: data.submittedAt ? new Date(data.submittedAt) : null,
     },
     include: {
       house: true,

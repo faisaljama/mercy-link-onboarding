@@ -30,6 +30,7 @@ import {
   FileText,
   Trash2,
   Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -113,37 +114,6 @@ interface Checklist {
 interface House {
   id: string;
   name: string;
-}
-
-function getCompletionStats(checklist: Checklist) {
-  const remoteFields = [
-    'remoteLogNotesReviewed', 'remoteGmailChecked', 'remoteAppointmentsReviewed',
-    'remoteCalendarUpdated', 'remoteScheduleVerified', 'remoteClockInReviewed',
-    'remoteControlledSubstances', 'remoteMedsAdministered', 'remoteProgressNotesReviewed',
-    'remotePrnDocumented', 'remoteIncidentReportsReviewed', 'remoteAppointmentsFollowUp',
-    'remoteStaffTrainingChecked', 'remoteEveningMedsReviewed', 'remoteNarcoticCountsVerified'
-  ];
-
-  const onsiteFields = [
-    'onsiteClockedIn', 'onsiteHandoffReviewed', 'onsiteVerbalHandoff',
-    'onsiteNarcoticCount', 'onsitePettyCashCount', 'onsiteMedQuantitiesReviewed',
-    'onsitePrnMedsChecked', 'onsiteOverflowBinsChecked', 'onsitePharmacyDeliveryReviewed',
-    'onsiteMedStorageChecked', 'onsiteGlucometerSupplies', 'onsiteStaffInteractions',
-    'onsiteRoomsClean', 'onsiteDietaryFollowed', 'onsiteActivitiesObserved',
-    'onsiteResidentSpoken', 'onsiteReceiptBinderReviewed', 'onsiteResidentBindersReviewed',
-    'onsiteAfterVisitSummaries', 'onsiteOutcomeTracker', 'onsiteFireDrillBinder',
-    'onsiteCommonAreasCleaned', 'onsiteFoodLabeled', 'onsiteSuppliesStocked',
-    'onsiteBathroomsCleaned', 'onsiteGarbageChecked', 'onsiteIpadCharged',
-    'onsiteDoorsSecure', 'onsiteWaterSoftener', 'onsiteFurnaceFilter',
-    'onsiteExteriorChecked', 'onsiteStaffCoaching'
-  ];
-
-  const fields = checklist.visitType === "REMOTE" ? remoteFields : onsiteFields;
-  const completed = fields.filter((f) => (checklist as unknown as Record<string, boolean>)[f] === true).length;
-  const total = fields.length;
-  const percentage = Math.round((completed / total) * 100);
-
-  return { completed, total, percentage };
 }
 
 export function ChecklistTable({
@@ -310,15 +280,13 @@ export function ChecklistTable({
             <TableHead>Date</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>House</TableHead>
-            <TableHead>Completion</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Created By</TableHead>
             <TableHead className="w-[80px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {checklists.map((checklist) => {
-            const stats = getCompletionStats(checklist);
-            return (
+          {checklists.map((checklist) => (
               <TableRow key={checklist.id}>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -346,25 +314,10 @@ export function ChecklistTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${
-                          stats.percentage === 100
-                            ? "bg-green-500"
-                            : stats.percentage >= 75
-                            ? "bg-blue-500"
-                            : stats.percentage >= 50
-                            ? "bg-amber-500"
-                            : "bg-red-500"
-                        }`}
-                        style={{ width: `${stats.percentage}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-slate-600">
-                      {stats.completed}/{stats.total} ({stats.percentage}%)
-                    </span>
-                  </div>
+                  <Badge className="bg-green-100 text-green-700">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Completed
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <span className="text-sm text-slate-600">{checklist.createdBy.name}</span>
@@ -389,8 +342,7 @@ export function ChecklistTable({
                   </div>
                 </TableCell>
               </TableRow>
-            );
-          })}
+          ))}
         </TableBody>
       </Table>
 

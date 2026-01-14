@@ -26,6 +26,7 @@ async function getChecklistData(houseIds: string[], month: number, year: number)
         gte: startDate,
         lte: endDate,
       },
+      isSubmitted: true, // Only show submitted checklists
     },
     include: {
       house: true,

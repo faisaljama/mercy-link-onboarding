@@ -958,6 +958,9 @@ model DCDailyChecklist {
   followUpItems        String?  // JSON array of follow-up items
   issuesIdentified     String?  // JSON array of issues
 
+  isSubmitted   Boolean  @default(false)
+  submittedAt   DateTime?
+
   createdById   String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
