@@ -363,6 +363,9 @@ model Client {
   // Medication Verification relations
   scheduledMedVerifications ScheduledMedVerification[]
   prnInventory              PrnInventory[]
+
+  // Service Recipient Training (245D.09)
+  serviceRecipientTrainings ServiceRecipientTraining[]
 }
 
 // Additional Healthcare Providers for clients
@@ -409,6 +412,7 @@ model Employee {
   shiftNotes                ShiftNote[]
   residentAssignments       StaffResidentAssignment[]
   clientOnboardingAcknowledgments ClientOnboardingAcknowledgment[]
+  serviceRecipientTrainings ServiceRecipientTraining[]
 }
 
 // Employee Training Log - tracks new hire orientation and annual training per 245D.09
@@ -464,6 +468,32 @@ model EmployeeTrainingDocument {
   uploadedBy      User                @relation("TrainingDocUploadedBy", fields: [uploadedById], references: [id])
 
   @@index([trainingLogId])
+}
+
+// Service Recipient Orientation Training - per MN Statute 245D.09, subd. 4a
+// Tracks when staff complete training on IAPP, SPA, SMA for each client
+model ServiceRecipientTraining {
+  id              String   @id @default(cuid())
+  employeeId      String
+  clientId        String
+  documentType    String   // IAPP, SPA, SMA
+
+  // Training details
+  trainerName     String   // Name of person who conducted training
+  acknowledgedAt  DateTime @default(now())
+  attestationText String
+  signatureData   String   // Base64 encoded signature
+
+  // Audit fields
+  ipAddress       String?
+  userAgent       String?
+
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, clientId, documentType])
+  @@index([employeeId])
+  @@index([clientId])
 }
 
 model EmployeeHouse {

@@ -28,6 +28,7 @@ import { TrainingChecklist } from "./training-checklist";
 import { EmployeeDocuments } from "./employee-documents";
 import { EmployeeDiscipline } from "./employee-discipline";
 import { EmployeeTrainingLog } from "./employee-training-log";
+import { ClientTrainingLog } from "./client-training-log";
 
 async function getEmployee(id: string, houseIds: string[]) {
   const employee = await prisma.employee.findFirst({
@@ -335,6 +336,7 @@ export default async function EmployeeDetailPage({
             <Tabs defaultValue="training-logs">
               <TabsList>
                 <TabsTrigger value="training-logs">Training Logs</TabsTrigger>
+                <TabsTrigger value="client-training">Client Training</TabsTrigger>
                 <TabsTrigger value="training">Training Checklist</TabsTrigger>
                 <TabsTrigger value="documents">
                   Documents ({employee.documents.length})
@@ -351,6 +353,14 @@ export default async function EmployeeDetailPage({
                   hireDate={employee.hireDate}
                   experienceYears={employee.experienceYears}
                   canEdit={["ADMIN", "HR", "DESIGNATED_COORDINATOR", "DESIGNATED_MANAGER"].includes(session.role)}
+                />
+              </TabsContent>
+
+              <TabsContent value="client-training" className="mt-4">
+                <ClientTrainingLog
+                  employeeId={employee.id}
+                  employeeName={`${employee.firstName} ${employee.lastName}`}
+                  employeePosition={employee.position}
                 />
               </TabsContent>
 

@@ -15,9 +15,11 @@ import {
   AlertCircle,
   ExternalLink,
   User,
+  GraduationCap,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { ClientTrainingSection } from "./client-training-section";
 
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   IAPP: "Individual Abuse Prevention Plan",
@@ -124,7 +126,7 @@ export default async function DocumentsPage({
   const houseDocuments = documents.filter(d => d.houseId && !d.clientId);
   const orgDocuments = documents.filter(d => !d.houseId && !d.clientId);
 
-  const defaultTab = params.tab || "pending";
+  const defaultTab = params.tab || "training";
 
   return (
     <div className="space-y-6">
@@ -186,7 +188,11 @@ export default async function DocumentsPage({
 
       {/* Document Tabs */}
       <Tabs defaultValue={defaultTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="training" className="gap-1">
+            <GraduationCap className="h-4 w-4" />
+            Client Training
+          </TabsTrigger>
           <TabsTrigger value="pending" className={pendingDocuments.length > 0 ? "text-orange-600" : ""}>
             Pending Review ({pendingDocuments.length})
           </TabsTrigger>
@@ -197,6 +203,10 @@ export default async function DocumentsPage({
             All Documents ({allDocuments.length})
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="training" className="mt-4">
+          <ClientTrainingSection houseFilter={params.house} />
+        </TabsContent>
 
         <TabsContent value="pending" className="mt-4">
           {pendingDocuments.length > 0 ? (
