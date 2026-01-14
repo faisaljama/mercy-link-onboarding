@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, getUserHouseIds } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 
 // GET - Fetch client training status for current user (based on their employee record)
 export async function GET(request: NextRequest) {
@@ -10,15 +10,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const houseIds = await getUserHouseIds(session.id);
     const { searchParams } = new URL(request.url);
     const houseFilter = searchParams.get("houseId");
 
-    // Get the employee record linked to this user
+    // Get the employee record linked to this user with their assigned houses
     const employee = await prisma.employee.findFirst({
       where: {
         email: session.email,
         status: "ACTIVE",
+      },
+      include: {
+        assignedHouses: {
+          select: { houseId: true },
+        },
       },
     });
 
@@ -26,13 +30,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Employee record not found" }, { status: 404 });
     }
 
-    // Build where clause for clients
+    // Get house IDs from employee's assigned houses (not user's)
+    const employeeHouseIds = employee.assignedHouses.map((ah) => ah.houseId);
+
+    if (employeeHouseIds.length === 0) {
+      return NextResponse.json({
+        clients: [],
+        employeeId: employee.id,
+        employeeName: `${employee.firstName} ${employee.lastName}`,
+      });
+    }
+
+    // Build where clause for clients - filter by employee's assigned houses
     const clientWhere: Record<string, unknown> = {
       status: "ACTIVE",
-      houseId: { in: houseIds },
+      houseId: { in: employeeHouseIds },
     };
 
-    if (houseFilter && houseIds.includes(houseFilter)) {
+    if (houseFilter && employeeHouseIds.includes(houseFilter)) {
       clientWhere.houseId = houseFilter;
     }
 
@@ -97,19 +112,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const houseIds = await getUserHouseIds(session.id);
-
-    // Get the employee record linked to this user
+    // Get the employee record linked to this user with their assigned houses
     const employee = await prisma.employee.findFirst({
       where: {
         email: session.email,
         status: "ACTIVE",
+      },
+      include: {
+        assignedHouses: {
+          select: { houseId: true },
+        },
       },
     });
 
     if (!employee) {
       return NextResponse.json({ error: "Employee record not found" }, { status: 404 });
     }
+
+    // Get house IDs from employee's assigned houses
+    const employeeHouseIds = employee.assignedHouses.map((ah) => ah.houseId);
 
     const data = await request.json();
     const { clientId, documentType, trainerName, signatureData } = data;
@@ -131,11 +152,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify client access
+    // Verify client access - employee must be assigned to the client's house
     const client = await prisma.client.findFirst({
       where: {
         id: clientId,
-        houseId: { in: houseIds },
+        houseId: { in: employeeHouseIds },
         status: "ACTIVE",
       },
     });

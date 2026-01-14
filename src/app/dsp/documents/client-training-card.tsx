@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,21 +75,25 @@ export function ClientTrainingCard({ client, onTrainingComplete }: ClientTrainin
           <div className="flex items-start gap-4">
             {/* Client Photo */}
             <div className="flex-shrink-0">
-              {client.photoUrl ? (
-                <Image
+              {client.photoUrl && client.photoUrl.startsWith("http") ? (
+                <img
                   src={client.photoUrl}
                   alt={`${client.firstName} ${client.lastName}`}
                   width={64}
                   height={64}
-                  className="rounded-full object-cover"
+                  className="w-16 h-16 rounded-full object-cover"
+                  onError={(e) => {
+                    // Hide broken image and show initials instead
+                    e.currentTarget.style.display = "none";
+                    e.currentTarget.nextElementSibling?.classList.remove("hidden");
+                  }}
                 />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-lg font-semibold text-blue-600">
-                    {client.firstName.charAt(0)}{client.lastName.charAt(0)}
-                  </span>
-                </div>
-              )}
+              ) : null}
+              <div className={`w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center ${client.photoUrl && client.photoUrl.startsWith("http") ? "hidden" : ""}`}>
+                <span className="text-lg font-semibold text-blue-600">
+                  {client.firstName.charAt(0)}{client.lastName.charAt(0)}
+                </span>
+              </div>
             </div>
 
             {/* Client Info & Training Buttons */}
