@@ -240,6 +240,18 @@ export default async function BillingPage({
               Billing Reports
             </Button>
           </Link>
+          <Link href="/dashboard/billing/accounts-receivable">
+            <Button variant="outline">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Accounts Receivable
+            </Button>
+          </Link>
+          <Link href="/dashboard/billing/reconciliation">
+            <Button variant="outline">
+              <FileText className="mr-2 h-4 w-4" />
+              Reconciliation
+            </Button>
+          </Link>
           <PrintSelector houses={houses} />
           <NewAgreementDialog houses={houses} clients={clients} />
         </div>

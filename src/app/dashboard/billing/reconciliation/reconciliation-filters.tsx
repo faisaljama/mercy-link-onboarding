@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -28,16 +28,25 @@ export function ReconciliationFilters({
   currentYear,
 }: ReconciliationFiltersProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const updateFilter = (key: string, value: string | null) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams();
+
+    // Preserve existing filters
+    if (currentHouseId && key !== "houseId") {
+      params.set("houseId", currentHouseId);
+    }
+    if (currentYear && key !== "year") {
+      params.set("year", currentYear);
+    }
+
+    // Set new value
     if (value) {
       params.set(key, value);
-    } else {
-      params.delete(key);
     }
-    router.push(`/dashboard/billing/reconciliation?${params.toString()}`);
+
+    const queryString = params.toString();
+    router.push(`/dashboard/billing/reconciliation${queryString ? `?${queryString}` : ""}`);
   };
 
   const clearFilters = () => {
