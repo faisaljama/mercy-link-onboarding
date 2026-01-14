@@ -187,6 +187,8 @@ export default async function DCChecklistPage({
             houses={houses}
             currentMonth={month}
             currentYear={year}
+            currentUserId={session.id}
+            currentUserRole={session.role}
           />
         </CardContent>
       </Card>

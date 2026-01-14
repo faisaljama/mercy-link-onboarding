@@ -28,7 +28,19 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { format } from "date-fns";
 
@@ -139,15 +151,63 @@ export function ChecklistTable({
   houses,
   currentMonth,
   currentYear,
+  currentUserId,
+  currentUserRole,
 }: {
   checklists: Checklist[];
   houses: House[];
   currentMonth: number;
   currentYear: number;
+  currentUserId: string;
+  currentUserRole: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedHouse, setSelectedHouse] = useState(searchParams.get("houseId") || "all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [checklistToDelete, setChecklistToDelete] = useState<Checklist | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isAdmin = currentUserRole === "ADMIN";
+
+  const canDelete = (checklist: Checklist) => {
+    // Admin can delete any checklist
+    if (isAdmin) return true;
+    // Creator can delete their own checklist
+    return checklist.createdBy.id === currentUserId;
+  };
+
+  const handleDeleteClick = (checklist: Checklist) => {
+    setChecklistToDelete(checklist);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!checklistToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/dc-checklist/${checklistToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.error || "Failed to delete checklist");
+        return;
+      }
+
+      // Refresh the page to show updated list
+      router.refresh();
+    } catch (error) {
+      console.error("Error deleting checklist:", error);
+      alert("Failed to delete checklist");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setChecklistToDelete(null);
+    }
+  };
 
   const handleMonthChange = (direction: "prev" | "next") => {
     let newMonth = currentMonth;
@@ -310,17 +370,63 @@ export function ChecklistTable({
                   <span className="text-sm text-slate-600">{checklist.createdBy.name}</span>
                 </TableCell>
                 <TableCell>
-                  <Link href={`/dashboard/dc-checklist/${checklist.id}`}>
-                    <Button variant="ghost" size="sm">
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-1">
+                    <Link href={`/dashboard/dc-checklist/${checklist.id}`}>
+                      <Button variant="ghost" size="sm">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    {canDelete(checklist) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteClick(checklist)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Checklist</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this checklist from{" "}
+              <span className="font-medium">{checklistToDelete?.house.name}</span> on{" "}
+              <span className="font-medium">
+                {checklistToDelete && format(new Date(checklistToDelete.date), "MMM d, yyyy")}
+              </span>
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
