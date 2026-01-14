@@ -43,7 +43,7 @@ async function getEmployeeByEmail(email: string) {
   });
 }
 
-async function getChoresData(houseIds: string[], houseId: string | null, shiftDate: Date, shiftType: string) {
+async function getChoresData(houseIds: string[], houseId: string | null, shiftDate: Date, shiftType: string, employeeId: string | null) {
   const selectedDate = startOfDay(shiftDate);
 
   // Get houses user has access to
@@ -82,11 +82,19 @@ async function getChoresData(houseIds: string[], houseId: string | null, shiftDa
     orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
   });
 
-  // Filter chores for the selected shift
+  // Filter chores for the selected shift and staff assignment
   const shiftChores = allChores.filter((chore) => {
     try {
       const shifts = JSON.parse(chore.shifts);
-      return shifts.includes(shiftType);
+      if (!shifts.includes(shiftType)) return false;
+
+      // Check staff assignment - if assignedToIds is empty, anyone can complete
+      const assignedIds = JSON.parse(chore.assignedToIds || "[]") as string[];
+      if (assignedIds.length > 0 && employeeId && !assignedIds.includes(employeeId)) {
+        return false; // This chore is assigned to other staff
+      }
+
+      return true;
     } catch {
       return false;
     }
@@ -170,15 +178,16 @@ export default async function ChoresPage({
   const shiftDate = params.date ? new Date(params.date) : new Date();
   const shiftType = params.shift || defaultShift;
 
+  // Get employee ID for the current user
+  const employee = await getEmployeeByEmail(session.email);
+
   const { houses, selectedHouse, choresByCategory } = await getChoresData(
     houseIds,
     params.house || null,
     shiftDate,
-    shiftType
+    shiftType,
+    employee?.id || null
   );
-
-  // Get employee ID for the current user
-  const employee = await getEmployeeByEmail(session.email);
 
   if (houses.length === 0) {
     return (

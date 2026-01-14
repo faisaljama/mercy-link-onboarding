@@ -52,11 +52,20 @@ import {
   Home,
   Loader2,
   RotateCcw,
+  Users,
+  User,
 } from "lucide-react";
 
 interface House {
   id: string;
   name: string;
+}
+
+interface Staff {
+  id: string;
+  firstName: string;
+  lastName: string;
+  assignedHouses: { houseId: string }[];
 }
 
 interface Chore {
@@ -69,12 +78,14 @@ interface Chore {
   isRequired: boolean;
   isActive: boolean;
   sortOrder: number;
+  assignedToIds: string;
   house: { id: string; name: string };
   createdBy: { id: string; name: string } | null;
 }
 
 interface ChoreManagementProps {
   houses: House[];
+  staff: Staff[];
   chores: Chore[];
   categoryLabels: Record<string, string>;
   currentHouseFilter?: string;
@@ -98,6 +109,7 @@ const CATEGORIES = [
 
 export function ChoreManagement({
   houses,
+  staff,
   chores,
   categoryLabels,
   currentHouseFilter,
@@ -121,6 +133,7 @@ export function ChoreManagement({
     requiresPhoto: false,
     isRequired: true,
     sortOrder: 0,
+    assignedToIds: [] as string[],
   });
 
   const resetForm = () => {
@@ -133,6 +146,7 @@ export function ChoreManagement({
       requiresPhoto: false,
       isRequired: true,
       sortOrder: 0,
+      assignedToIds: [],
     });
     setError(null);
   };
@@ -147,6 +161,7 @@ export function ChoreManagement({
       requiresPhoto: chore.requiresPhoto,
       isRequired: chore.isRequired,
       sortOrder: chore.sortOrder,
+      assignedToIds: JSON.parse(chore.assignedToIds || "[]"),
     });
     setEditingChore(chore);
     setError(null);
@@ -268,6 +283,20 @@ export function ChoreManagement({
     }));
   };
 
+  const toggleStaff = (staffId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      assignedToIds: prev.assignedToIds.includes(staffId)
+        ? prev.assignedToIds.filter((id) => id !== staffId)
+        : [...prev.assignedToIds, staffId],
+    }));
+  };
+
+  // Filter staff by selected house
+  const houseStaff = formData.houseId
+    ? staff.filter((s) => s.assignedHouses.some((h) => h.houseId === formData.houseId))
+    : [];
+
   // Filter chores
   const filteredChores = chores.filter((c) => {
     if (!showInactive && !c.isActive) return false;
@@ -378,6 +407,49 @@ export function ChoreManagement({
             </label>
           ))}
         </div>
+      </div>
+
+      {/* Staff Assignment */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Assign to Staff
+        </Label>
+        {!formData.houseId ? (
+          <p className="text-sm text-slate-500 italic">Select a house first to see available staff</p>
+        ) : houseStaff.length === 0 ? (
+          <p className="text-sm text-slate-500 italic">No staff assigned to this house</p>
+        ) : (
+          <>
+            <p className="text-xs text-slate-500">
+              Leave empty for anyone to complete, or select specific staff members
+            </p>
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border rounded-lg bg-slate-50">
+              {houseStaff.map((s) => (
+                <label
+                  key={s.id}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-sm ${
+                    formData.assignedToIds.includes(s.id)
+                      ? "bg-blue-50 border-blue-300 text-blue-700"
+                      : "bg-white border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <Checkbox
+                    checked={formData.assignedToIds.includes(s.id)}
+                    onCheckedChange={() => toggleStaff(s.id)}
+                  />
+                  <User className="h-3 w-3" />
+                  {s.firstName} {s.lastName}
+                </label>
+              ))}
+            </div>
+            {formData.assignedToIds.length > 0 && (
+              <p className="text-xs text-blue-600">
+                {formData.assignedToIds.length} staff member{formData.assignedToIds.length !== 1 ? "s" : ""} assigned
+              </p>
+            )}
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-6">
@@ -517,6 +589,7 @@ export function ChoreManagement({
                       <TableHead>Chore</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Shifts</TableHead>
+                      <TableHead>Assigned To</TableHead>
                       <TableHead className="text-center">Photo</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -525,6 +598,8 @@ export function ChoreManagement({
                   <TableBody>
                     {houseChores.map((chore) => {
                       const shifts = JSON.parse(chore.shifts) as string[];
+                      const assignedIds = JSON.parse(chore.assignedToIds || "[]") as string[];
+                      const assignedStaff = staff.filter((s) => assignedIds.includes(s.id));
                       return (
                         <TableRow
                           key={chore.id}
@@ -553,6 +628,24 @@ export function ChoreManagement({
                                 </Badge>
                               ))}
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            {assignedStaff.length === 0 ? (
+                              <span className="text-xs text-slate-400 italic">Anyone</span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {assignedStaff.slice(0, 2).map((s) => (
+                                  <Badge key={s.id} variant="outline" className="text-xs">
+                                    {s.firstName} {s.lastName[0]}.
+                                  </Badge>
+                                ))}
+                                {assignedStaff.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{assignedStaff.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell className="text-center">
                             {chore.requiresPhoto ? (

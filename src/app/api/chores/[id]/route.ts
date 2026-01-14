@@ -77,6 +77,7 @@ export async function PUT(
       isRequired,
       sortOrder,
       isActive,
+      assignedToIds,
     } = data;
 
     const houseIds = await getUserHouseIds(session.id);
@@ -103,6 +104,7 @@ export async function PUT(
     if (typeof isRequired === "boolean") updateData.isRequired = isRequired;
     if (typeof sortOrder === "number") updateData.sortOrder = sortOrder;
     if (typeof isActive === "boolean") updateData.isActive = isActive;
+    if (assignedToIds !== undefined) updateData.assignedToIds = JSON.stringify(assignedToIds || []);
 
     const chore = await prisma.chore.update({
       where: { id },

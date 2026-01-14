@@ -33,6 +33,25 @@ async function getChoreData(houseIds: string[], filters: SearchParams) {
     orderBy: { name: "asc" },
   });
 
+  // Get staff assigned to these houses
+  const staff = await prisma.employee.findMany({
+    where: {
+      status: "ACTIVE",
+      assignedHouses: {
+        some: { houseId: { in: houseIds } },
+      },
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      assignedHouses: {
+        select: { houseId: true },
+      },
+    },
+    orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+  });
+
   const chores = await prisma.chore.findMany({
     where: {
       houseId: { in: effectiveHouseIds },
@@ -58,6 +77,7 @@ async function getChoreData(houseIds: string[], filters: SearchParams) {
 
   return {
     houses,
+    staff,
     chores,
     activeChores,
     inactiveChores,
@@ -85,7 +105,7 @@ export default async function ChoresPage({
   const params = await searchParams;
   const houseIds = await getUserHouseIds(session.id);
 
-  const { houses, chores, stats, choresByCategory } = await getChoreData(houseIds, params);
+  const { houses, staff, chores, stats } = await getChoreData(houseIds, params);
 
   return (
     <div className="space-y-6">
@@ -142,6 +162,7 @@ export default async function ChoresPage({
       {/* Chore Management Component */}
       <ChoreManagement
         houses={houses}
+        staff={staff}
         chores={chores}
         categoryLabels={CATEGORY_LABELS}
         currentHouseFilter={params.house}

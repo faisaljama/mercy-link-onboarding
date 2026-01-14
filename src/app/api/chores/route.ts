@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
       requiresPhoto,
       isRequired,
       sortOrder,
+      assignedToIds,
     } = data;
 
     if (!houseId || !name || !category) {
@@ -153,6 +154,7 @@ export async function POST(request: NextRequest) {
         requiresPhoto: requiresPhoto || false,
         isRequired: isRequired !== false,
         sortOrder: sortOrder || 0,
+        assignedToIds: JSON.stringify(assignedToIds || []),
         createdById: session.id,
       },
       include: {
