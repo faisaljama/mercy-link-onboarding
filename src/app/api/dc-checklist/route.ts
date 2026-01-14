@@ -76,10 +76,18 @@ export async function POST(request: NextRequest) {
   });
 
   if (existingChecklist) {
-    return NextResponse.json(
-      { error: "A checklist already exists for this house and date" },
-      { status: 400 }
-    );
+    // If the existing checklist is already submitted, don't allow creating a new one
+    if (existingChecklist.isSubmitted) {
+      return NextResponse.json(
+        { error: "A submitted checklist already exists for this house and date" },
+        { status: 400 }
+      );
+    }
+
+    // If it's not submitted (draft), delete it so user can start fresh
+    await prisma.dCDailyChecklist.delete({
+      where: { id: existingChecklist.id },
+    });
   }
 
   const checklist = await prisma.dCDailyChecklist.create({
