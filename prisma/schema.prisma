@@ -115,6 +115,11 @@ model User {
   prnInventoryUpdates        PrnInventory[]              @relation("PrnInventoryUpdatedBy")
   prnAlertAcknowledgments    PrnAlertLog[]               @relation("PrnAlertAcknowledgedBy")
   prnHistoryUpdates          PrnHistory[]                @relation("PrnHistoryUpdatedBy")
+
+  // Payment Reconciliation relations
+  paymentReceiptsCreated        PaymentReceipt[]             @relation("PaymentReceiptCreatedBy")
+  periodReconciliationsCreated  PeriodReconciliation[]       @relation("PeriodReconciliationCreatedBy")
+  saUtilizationsCreated         ServiceAgreementUtilization[] @relation("SAUtilizationCreatedBy")
 }
 
 model UserHouse {
@@ -170,6 +175,10 @@ model House {
   // Medication Verification relations
   scheduledMedVerifications ScheduledMedVerification[]
   prnInventory              PrnInventory[]
+
+  // Payment Reconciliation relations
+  paymentReceipts           PaymentReceipt[]
+  periodReconciliations     PeriodReconciliation[]
 }
 
 // House Utilities and Services
@@ -1247,6 +1256,7 @@ model ServiceAgreement {
   client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   house           House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
   createdBy       User      @relation("ServiceAgreementCreatedBy", fields: [createdById], references: [id])
+  utilizations    ServiceAgreementUtilization[]
 
   @@index([clientId])
   @@index([houseId])
@@ -1953,4 +1963,122 @@ model PrnHistory {
   updatedBy           User         @relation("PrnHistoryUpdatedBy", fields: [updatedById], references: [id])
 
   @@index([prnInventoryId])
+}
+
+// ============================================
+// PAYMENT RECONCILIATION MODELS
+// ============================================
+
+// Payment Receipt - Tracks incoming payments from MHCP/Insurance
+model PaymentReceipt {
+  id                    String    @id @default(cuid())
+
+  // Payment identification
+  paymentNumber         String?   // Check number or EFT reference
+  paymentType           String    // CHECK, EFT
+  paymentDate           DateTime  @db.Date
+
+  // Payment amounts by service type
+  paidCustomizedLiving  Decimal   @db.Decimal(12, 2) @default(0)  // CRS payments
+  paidPCA               Decimal   @db.Decimal(12, 2) @default(0)  // PCA service payments
+  paidICS               Decimal   @db.Decimal(12, 2) @default(0)  // ICS payments
+  paidOther             Decimal   @db.Decimal(12, 2) @default(0)  // Other service payments
+  totalAmount           Decimal   @db.Decimal(12, 2) @default(0)  // Total payment received
+
+  // House association (optional - if payment is for specific house)
+  houseId               String?
+
+  // Notes
+  notes                 String?
+
+  // Tracking
+  createdById           String
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  house                 House?    @relation(fields: [houseId], references: [id], onDelete: SetNull)
+  createdBy             User      @relation("PaymentReceiptCreatedBy", fields: [createdById], references: [id])
+  reconciliationEntries PeriodReconciliation[]
+
+  @@index([paymentDate])
+  @@index([houseId])
+}
+
+// Period Reconciliation - Tracks billing vs payments per house per period
+model PeriodReconciliation {
+  id                    String    @id @default(cuid())
+
+  // Period identification
+  houseId               String
+  periodStart           DateTime  @db.Date
+  periodEnd             DateTime  @db.Date
+
+  // Billing amounts (from billing reports)
+  billedAmount          Decimal   @db.Decimal(12, 2) @default(0)
+  billedUnits           Int       @default(0)  // Days/units billed
+
+  // Payment tracking
+  paidAmount            Decimal   @db.Decimal(12, 2) @default(0)
+  pendingAmount         Decimal   @db.Decimal(12, 2) @default(0)  // Calculated: billed - paid
+
+  // Link to payment receipt (if paid)
+  paymentReceiptId      String?
+
+  // Service type
+  serviceType           String    @default("CRS")  // CRS, ICS, PCA, etc.
+
+  // Status
+  status                String    @default("PENDING")  // PENDING, PARTIAL, PAID, ISSUE
+
+  // Notes
+  notes                 String?
+
+  // Tracking
+  createdById           String
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  house                 House     @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  paymentReceipt        PaymentReceipt? @relation(fields: [paymentReceiptId], references: [id], onDelete: SetNull)
+  createdBy             User      @relation("PeriodReconciliationCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([houseId, periodStart, periodEnd, serviceType])
+  @@index([houseId])
+  @@index([periodStart, periodEnd])
+  @@index([status])
+}
+
+// Service Agreement Utilization - Tracks units used per service agreement
+model ServiceAgreementUtilization {
+  id                    String    @id @default(cuid())
+  serviceAgreementId    String
+
+  // Period tracked
+  month                 Int       // 1-12
+  year                  Int
+
+  // Usage tracking
+  unitsAvailable        Decimal   @db.Decimal(10, 2) @default(0)  // Total units in SA
+  unitsUsed             Decimal   @db.Decimal(10, 2) @default(0)  // Units billed
+  unitsRemaining        Decimal   @db.Decimal(10, 2) @default(0)  // Remaining units
+
+  // Amount tracking (calculated from daily rate * units)
+  amountAvailable       Decimal   @db.Decimal(12, 2) @default(0)
+  amountBilled          Decimal   @db.Decimal(12, 2) @default(0)
+  amountPaid            Decimal   @db.Decimal(12, 2) @default(0)
+
+  // Notes
+  notes                 String?
+
+  // Tracking
+  createdById           String
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  serviceAgreement      ServiceAgreement @relation(fields: [serviceAgreementId], references: [id], onDelete: Cascade)
+  createdBy             User      @relation("SAUtilizationCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([serviceAgreementId, month, year])
+  @@index([serviceAgreementId])
+  @@index([month, year])
 }

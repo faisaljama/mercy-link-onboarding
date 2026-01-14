@@ -126,6 +126,8 @@ const moreGroupedNavigation: NavGroup[] = [
     icon: Wallet,
     items: [
       { name: "Billing", href: "/dashboard/billing", icon: FileText },
+      { name: "Accounts Receivable", href: "/dashboard/billing/accounts-receivable", icon: DollarSign },
+      { name: "Payment Reconciliation", href: "/dashboard/billing/reconciliation", icon: Receipt },
       { name: "Rent", href: "/dashboard/rent", icon: DollarSign },
       { name: "Expenses", href: "/dashboard/expenses", icon: Receipt },
     ],

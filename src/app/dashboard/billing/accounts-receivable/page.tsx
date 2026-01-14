@@ -201,10 +201,10 @@ export default async function AccountsReceivablePage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/billing/attendance">
+        <Link href="/dashboard/billing">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Attendance
+            Back to Billing
           </Button>
         </Link>
       </div>
