@@ -7,7 +7,7 @@ const SECRET_KEY = new TextEncoder().encode(
   process.env.AUTH_SECRET || "mercy-link-secret-key-change-in-production"
 );
 
-export type UserRole = "ADMIN" | "DESIGNATED_MANAGER" | "DESIGNATED_COORDINATOR" | "HR" | "OPERATIONS" | "FINANCE" | "LEAD_STAFF";
+export type UserRole = "ADMIN" | "DESIGNATED_MANAGER" | "DESIGNATED_COORDINATOR" | "HR" | "OPERATIONS" | "FINANCE" | "LEAD_STAFF" | "DSP";
 
 export interface SessionUser {
   id: string;

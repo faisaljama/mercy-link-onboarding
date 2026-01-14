@@ -36,7 +36,7 @@ import { NewPaymentDialog } from "./new-payment-dialog";
 import { NewReconciliationDialog } from "./new-reconciliation-dialog";
 import { ReconciliationFilters } from "./reconciliation-filters";
 
-const ALLOWED_ROLES = ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "FINANCE"];
+const ALLOWED_ROLES = ["ADMIN", "FINANCE"];
 
 async function getReconciliationData(houseIds: string[], houseFilter?: string, year?: string) {
   const currentYear = year ? parseInt(year) : new Date().getFullYear();

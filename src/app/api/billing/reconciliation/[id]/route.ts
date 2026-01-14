@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, getUserHouseIds } from "@/lib/auth";
 
-const ALLOWED_ROLES = ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS", "FINANCE"];
+const ALLOWED_ROLES = ["ADMIN", "FINANCE"];
 
 // GET - Get single reconciliation
 export async function GET(

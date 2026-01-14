@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, getUserHouseIds } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const ALLOWED_ROLES = ["ADMIN", "FINANCE"];
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -179,7 +182,11 @@ export default async function AccountsReceivablePage({
   searchParams: Promise<{ houseId?: string; status?: string }>;
 }) {
   const session = await getSession();
-  if (!session) return null;
+  if (!session) redirect("/login");
+
+  if (!ALLOWED_ROLES.includes(session.role)) {
+    redirect("/dashboard");
+  }
 
   const params = await searchParams;
   const houseIds = await getUserHouseIds(session.id);

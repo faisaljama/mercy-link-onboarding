@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { getVisibleMenuItems, ROLE_DISPLAY_NAMES } from "@/lib/permissions";
+import { UserRole } from "@/lib/auth";
 import {
   LayoutDashboard,
   Users,
@@ -39,7 +41,6 @@ import {
   StickyNote,
   IdCard,
   FileSignature,
-  Mic,
   MessageSquare,
   FileCheck,
 } from "lucide-react";
@@ -47,6 +48,44 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { NotificationBell } from "@/components/notification-bell";
+
+// Icon mapping from string name to component
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  LayoutDashboard,
+  Users,
+  UserCog,
+  Home,
+  Bell,
+  Settings,
+  LogOut,
+  FileText,
+  ClipboardList,
+  ClipboardCheck,
+  DollarSign,
+  Receipt,
+  Calendar,
+  Eye,
+  FileBarChart,
+  BookOpen,
+  Building2,
+  UsersRound,
+  Briefcase,
+  Wallet,
+  FolderOpen,
+  ListTodo,
+  Pill,
+  Flame,
+  Sparkles,
+  History,
+  Scale,
+  UserCheck,
+  CheckSquare,
+  StickyNote,
+  IdCard,
+  FileSignature,
+  MessageSquare,
+  FileCheck,
+};
 
 interface SidebarProps {
   user: {
@@ -56,111 +95,16 @@ interface SidebarProps {
   };
 }
 
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-interface NavGroup {
-  name: string;
-  icon: React.ComponentType<{ className?: string }>;
-  items: NavItem[];
-}
-
-// Direct navigation items (not grouped)
-const directNavigation: NavItem[] = [
-  { name: "Welcome", href: "/dashboard/welcome", icon: Sparkles },
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-];
-
-// Grouped navigation
-const groupedNavigation: NavGroup[] = [
-  {
-    name: "People",
-    icon: UsersRound,
-    items: [
-      { name: "Clients", href: "/dashboard/clients", icon: Users },
-      { name: "Employees", href: "/dashboard/employees", icon: UserCog },
-      { name: "Discipline", href: "/dashboard/discipline", icon: Scale },
-      { name: "Register", href: "/dashboard/register", icon: ClipboardCheck },
-    ],
-  },
-  {
-    name: "DSP Portal",
-    icon: UserCheck,
-    items: [
-      { name: "My Dashboard", href: "/dsp", icon: LayoutDashboard },
-      { name: "Chores", href: "/dsp/chores", icon: CheckSquare },
-      { name: "Shift Notes", href: "/dsp/shift-notes", icon: StickyNote },
-      { name: "Resident Profiles", href: "/dsp/residents", icon: IdCard },
-      { name: "Documents", href: "/dsp/documents", icon: FileSignature },
-    ],
-  },
-];
-
-// Houses as direct link
-const housesNav: NavItem = { name: "Houses", href: "/dashboard/houses", icon: Home };
-
-// More grouped navigation
-const moreGroupedNavigation: NavGroup[] = [
-  {
-    name: "Operations",
-    icon: Briefcase,
-    items: [
-      { name: "Daily Operations", href: "/dashboard/daily-operations", icon: ClipboardList },
-      { name: "Notes Review", href: "/dashboard/notes-review", icon: FileCheck },
-      { name: "ChatGPT Prompts", href: "/dashboard/resident-prompts", icon: MessageSquare },
-      { name: "DC Checklist", href: "/dashboard/dc-checklist", icon: Eye },
-      { name: "Weekly Reports", href: "/dashboard/weekly-reports", icon: FileBarChart },
-      { name: "QA Checklist", href: "/dashboard/qa-checklist", icon: ClipboardCheck },
-      { name: "Genoa Deliveries", href: "/dashboard/genoa-deliveries", icon: Pill },
-      { name: "Med Verification", href: "/dashboard/medications", icon: Pill },
-      { name: "Fire Drills", href: "/dashboard/fire-drills", icon: Flame },
-      { name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
-      { name: "Chore Management", href: "/dashboard/chores", icon: CheckSquare },
-    ],
-  },
-  {
-    name: "Finance",
-    icon: Wallet,
-    items: [
-      { name: "Billing", href: "/dashboard/billing", icon: FileText },
-      { name: "Accounts Receivable", href: "/dashboard/billing/accounts-receivable", icon: DollarSign },
-      { name: "Payment Reconciliation", href: "/dashboard/billing/reconciliation", icon: Receipt },
-      { name: "Rent", href: "/dashboard/rent", icon: DollarSign },
-      { name: "Expenses", href: "/dashboard/expenses", icon: Receipt },
-    ],
-  },
-  {
-    name: "Resources",
-    icon: FolderOpen,
-    items: [
-      { name: "Resource Hub", href: "/dashboard/resources", icon: BookOpen },
-      { name: "Documents", href: "/dashboard/documents", icon: FileText },
-    ],
-  },
-];
-
-// Calendar and Notifications as direct links
-const bottomDirectNavigation: NavItem[] = [
-  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
-  { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
-];
-
-const adminNavigation: NavItem[] = [
-  { name: "Organization", href: "/dashboard/organization", icon: Building2 },
-  { name: "Audit Log", href: "/dashboard/audit-log", icon: History },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
-];
-
-// Combine all groups for state management
-const allGroups = [...groupedNavigation, ...moreGroupedNavigation];
-
 export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [initialized, setInitialized] = useState(false);
+
+  // Get menu items based on user role
+  const { topItems, groups, bottomItems, adminItems } = useMemo(
+    () => getVisibleMenuItems(user.role as UserRole),
+    [user.role]
+  );
 
   // Load expanded state from localStorage on mount
   useEffect(() => {
@@ -182,7 +126,7 @@ export function Sidebar({ user }: SidebarProps) {
     const newExpanded = { ...expandedGroups };
     let changed = false;
 
-    allGroups.forEach((group) => {
+    groups.forEach((group) => {
       const hasActiveChild = group.items.some(
         (item) => pathname === item.href || pathname.startsWith(item.href + "/")
       );
@@ -196,7 +140,7 @@ export function Sidebar({ user }: SidebarProps) {
       setExpandedGroups(newExpanded);
       localStorage.setItem("sidebar-expanded-groups", JSON.stringify(newExpanded));
     }
-  }, [pathname, initialized]);
+  }, [pathname, initialized, groups]);
 
   // Save to localStorage when expanded state changes
   const toggleGroup = (groupName: string) => {
@@ -217,8 +161,13 @@ export function Sidebar({ user }: SidebarProps) {
     return pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
   };
 
-  const renderNavLink = (item: NavItem, isChild = false) => {
+  const getIcon = (iconName: string) => {
+    return ICON_MAP[iconName] || FileText;
+  };
+
+  const renderNavLink = (item: { name: string; href: string; icon: string }, isChild = false) => {
     const isActive = isLinkActive(item.href);
+    const Icon = getIcon(item.icon);
     return (
       <Link
         key={item.name}
@@ -231,15 +180,16 @@ export function Sidebar({ user }: SidebarProps) {
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
         )}
       >
-        <item.icon className={cn("h-5 w-5", isChild && "h-4 w-4")} />
+        <Icon className={cn("h-5 w-5", isChild && "h-4 w-4")} />
         {item.name}
       </Link>
     );
   };
 
-  const renderNavGroup = (group: NavGroup) => {
+  const renderNavGroup = (group: { name: string; icon: string; items: { name: string; href: string; icon: string }[] }) => {
     const isExpanded = expandedGroups[group.name];
     const hasActiveChild = group.items.some((item) => isLinkActive(item.href));
+    const Icon = getIcon(group.icon);
 
     return (
       <div key={group.name}>
@@ -253,7 +203,7 @@ export function Sidebar({ user }: SidebarProps) {
           )}
         >
           <div className="flex items-center gap-3">
-            <group.icon className="h-5 w-5" />
+            <Icon className="h-5 w-5" />
             {group.name}
           </div>
           {isExpanded ? (
@@ -270,6 +220,9 @@ export function Sidebar({ user }: SidebarProps) {
       </div>
     );
   };
+
+  // Get display name for role
+  const roleDisplayName = ROLE_DISPLAY_NAMES[user.role as UserRole] || user.role.replace(/_/g, " ");
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-slate-50">
@@ -303,27 +256,22 @@ export function Sidebar({ user }: SidebarProps) {
 
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-1">
-          {/* Dashboard - direct link */}
-          {directNavigation.map((item) => renderNavLink(item))}
+          {/* Top navigation items */}
+          {topItems.map((item) => renderNavLink(item))}
 
-          {/* People group */}
-          {groupedNavigation.map((group) => renderNavGroup(group))}
+          {/* Grouped navigation */}
+          {groups.map((group) => renderNavGroup(group))}
 
-          {/* Houses - direct link */}
-          {renderNavLink(housesNav)}
-
-          {/* Operations, Finance, Resources groups */}
-          {moreGroupedNavigation.map((group) => renderNavGroup(group))}
-
-          {/* Calendar, Notifications - direct links */}
-          {bottomDirectNavigation.map((item) => renderNavLink(item))}
+          {/* Bottom navigation items */}
+          {bottomItems.map((item) => renderNavLink(item))}
         </nav>
 
-        {user.role === "ADMIN" && (
+        {/* Admin section - only visible to ADMIN */}
+        {adminItems.length > 0 && (
           <>
             <Separator className="my-4" />
             <nav className="space-y-1">
-              {adminNavigation.map((item) => renderNavLink(item))}
+              {adminItems.map((item) => renderNavLink(item))}
             </nav>
           </>
         )}
@@ -333,7 +281,7 @@ export function Sidebar({ user }: SidebarProps) {
         <div className="flex items-center justify-between gap-2 rounded-lg bg-white p-2 shadow-sm">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-slate-900">{user.name}</p>
-            <p className="truncate text-xs text-slate-500">{user.role.replace("_", " ")}</p>
+            <p className="truncate text-xs text-slate-500">{roleDisplayName}</p>
           </div>
           <Button
             variant="ghost"
