@@ -162,16 +162,16 @@ export function NewPaymentDialog({ houses }: NewPaymentDialogProps) {
               <div className="space-y-2">
                 <Label htmlFor="houseId">House (Optional)</Label>
                 <Select
-                  value={formData.houseId}
+                  value={formData.houseId || "all"}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, houseId: value })
+                    setFormData({ ...formData, houseId: value === "all" ? "" : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="All Houses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Houses</SelectItem>
+                    <SelectItem value="all">All Houses</SelectItem>
                     {houses.map((house) => (
                       <SelectItem key={house.id} value={house.id}>
                         {house.name}

@@ -244,16 +244,16 @@ export function NewReconciliationDialog({ houses, payments }: NewReconciliationD
               <div className="space-y-2">
                 <Label htmlFor="paymentReceiptId">Link to Payment</Label>
                 <Select
-                  value={formData.paymentReceiptId}
+                  value={formData.paymentReceiptId || "none"}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, paymentReceiptId: value })
+                    setFormData({ ...formData, paymentReceiptId: value === "none" ? "" : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="No payment linked" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No payment linked</SelectItem>
+                    <SelectItem value="none">No payment linked</SelectItem>
                     {payments.map((payment) => (
                       <SelectItem key={payment.id} value={payment.id}>
                         {payment.paymentNumber || "Payment"} -{" "}
