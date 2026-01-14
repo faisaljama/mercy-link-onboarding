@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only certain roles can create chores
-    if (!["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"].includes(session.role)) {
+    if (!["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS"].includes(session.role)) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 

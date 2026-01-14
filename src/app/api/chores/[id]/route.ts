@@ -62,7 +62,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"].includes(session.role)) {
+    if (!["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS"].includes(session.role)) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
@@ -152,7 +152,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"].includes(session.role)) {
+    if (!["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "OPERATIONS"].includes(session.role)) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 

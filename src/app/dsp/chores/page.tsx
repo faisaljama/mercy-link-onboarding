@@ -36,6 +36,13 @@ const CATEGORY_ORDER = [
   "other",
 ];
 
+async function getEmployeeByEmail(email: string) {
+  return prisma.employee.findFirst({
+    where: { email, status: "ACTIVE" },
+    select: { id: true, firstName: true, lastName: true },
+  });
+}
+
 async function getChoresData(houseIds: string[], houseId: string | null, shiftDate: Date, shiftType: string) {
   const selectedDate = startOfDay(shiftDate);
 
@@ -170,6 +177,9 @@ export default async function ChoresPage({
     shiftType
   );
 
+  // Get employee ID for the current user
+  const employee = await getEmployeeByEmail(session.email);
+
   if (houses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-slate-500">
@@ -253,6 +263,7 @@ export default async function ChoresPage({
                   houseId={selectedHouse?.id || ""}
                   shiftDate={format(shiftDate, "yyyy-MM-dd")}
                   shiftType={shiftType}
+                  staffId={employee?.id || ""}
                 />
               ))}
             </div>

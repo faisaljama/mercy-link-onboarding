@@ -118,6 +118,7 @@ const moreGroupedNavigation: NavGroup[] = [
       { name: "Med Verification", href: "/dashboard/medications", icon: Pill },
       { name: "Fire Drills", href: "/dashboard/fire-drills", icon: Flame },
       { name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
+      { name: "Chore Management", href: "/dashboard/chores", icon: CheckSquare },
     ],
   },
   {
