@@ -13,8 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mercy Link Portal",
+  title: {
+    default: "Mercy Link Portal",
+    template: "%s | Mercy Link Portal",
+  },
   description: "245D Compliance Dashboard for Mercy Link LLC",
+  icons: {
+    icon: "/images/mercy-link-logo.png",
+    apple: "/images/mercy-link-logo.png",
+  },
 };
 
 export default function RootLayout({
