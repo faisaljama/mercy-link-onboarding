@@ -120,6 +120,9 @@ model User {
   paymentReceiptsCreated        PaymentReceipt[]             @relation("PaymentReceiptCreatedBy")
   periodReconciliationsCreated  PeriodReconciliation[]       @relation("PeriodReconciliationCreatedBy")
   saUtilizationsCreated         ServiceAgreementUtilization[] @relation("SAUtilizationCreatedBy")
+
+  // HR Application relations
+  reviewedApplications          JobApplication[]             @relation("ApplicationReviewer")
 }
 
 model UserHouse {
@@ -413,6 +416,9 @@ model Employee {
   residentAssignments       StaffResidentAssignment[]
   clientOnboardingAcknowledgments ClientOnboardingAcknowledgment[]
   serviceRecipientTrainings ServiceRecipientTraining[]
+
+  // HR Application relation
+  application               JobApplication?              @relation("ApplicationEmployee")
 }
 
 // Employee Training Log - tracks new hire orientation and annual training per 245D.09
@@ -2115,4 +2121,184 @@ model ServiceAgreementUtilization {
   @@unique([serviceAgreementId, month, year])
   @@index([serviceAgreementId])
   @@index([month, year])
+}
+
+// ============================================
+// HR APPLICATION & ONBOARDING MODELS
+// ============================================
+
+// Job Application - tracks applicants through the hiring process
+model JobApplication {
+  id                    String   @id @default(cuid())
+  accessToken           String   @unique @default(cuid())  // Public access without login
+  status                String   @default("DRAFT")  // DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, ONBOARDING, COMPLETED, HIRED, REJECTED, WITHDRAWN
+
+  // Position info
+  positionAppliedFor    String?
+  employmentType        String[] // FULL_TIME, PART_TIME, ON_CALL
+  availableShifts       String[] // DAYS, EVENINGS, OVERNIGHTS, WEEKENDS
+  dateAvailableToStart  DateTime?
+
+  // Personal info (from Employment Application)
+  firstName             String?
+  middleName            String?
+  lastName              String?
+  email                 String   @unique
+  phone                 String?
+  streetAddress         String?
+  city                  String?
+  state                 String?
+  zipCode               String?
+
+  // Eligibility
+  authorizedToWork      Boolean?
+  isOver18              Boolean?
+  hasDriversLicense     Boolean?
+  driversLicenseNumber  String?
+  driversLicenseState   String?
+  hasReliableTransport  Boolean?
+  hasAutoInsurance      Boolean?
+
+  // Background study sensitive fields (encrypted)
+  dateOfBirth           DateTime?
+  ssnEncrypted          String?   // AES-256 encrypted
+  ssnLastFour           String?   // For display
+  gender                String?
+  eyeColor              String?
+  hairColor             String?
+  height                String?
+  weight                String?
+
+  // Conviction disclosure
+  hasConviction         Boolean?
+  convictionExplanation String?
+
+  // HR Review
+  reviewedById          String?
+  reviewedAt            DateTime?
+  reviewNotes           String?
+  rejectionReason       String?
+
+  // Timestamps
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  submittedAt           DateTime?
+  approvedAt            DateTime?
+  completedAt           DateTime?
+
+  // Relations
+  reviewer              User?     @relation("ApplicationReviewer", fields: [reviewedById], references: [id])
+  education             ApplicationEducation[]
+  workHistory           ApplicationWorkHistory[]
+  references            ApplicationReference[]
+  addressHistory        ApplicationAddressHistory[]
+  formSubmissions       FormSubmission[]
+  documents             ApplicationDocument[]
+
+  // Link to created employee
+  employeeId            String?   @unique
+  employee              Employee? @relation("ApplicationEmployee", fields: [employeeId], references: [id])
+
+  @@index([status])
+  @@index([accessToken])
+}
+
+// Education history for job applications
+model ApplicationEducation {
+  id            String         @id @default(cuid())
+  applicationId String
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  schoolName    String
+  location      String?
+  yearsAttended String?
+  graduated     Boolean?
+  degree        String?
+
+  @@index([applicationId])
+}
+
+// Work history for job applications
+model ApplicationWorkHistory {
+  id               String         @id @default(cuid())
+  applicationId    String
+  application      JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  companyName      String
+  jobTitle         String?
+  supervisorName   String?
+  phone            String?
+  address          String?
+  startDate        DateTime?
+  endDate          DateTime?
+  reasonForLeaving String?
+  mayContact       Boolean?
+
+  @@index([applicationId])
+}
+
+// References for job applications
+model ApplicationReference {
+  id            String         @id @default(cuid())
+  applicationId String
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name          String
+  phone         String?
+  relationship  String?
+
+  @@index([applicationId])
+}
+
+// Address history for background study (5 years)
+model ApplicationAddressHistory {
+  id            String         @id @default(cuid())
+  applicationId String
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  streetAddress String
+  city          String
+  state         String
+  fromDate      DateTime?
+  toDate        DateTime?
+  isCurrent     Boolean        @default(false)
+
+  @@index([applicationId])
+}
+
+// Form submissions for onboarding forms
+model FormSubmission {
+  id            String         @id @default(cuid())
+  applicationId String
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  formType      String         // EMPLOYMENT_APPLICATION, BACKGROUND_STUDY, DIRECT_DEPOSIT, etc.
+  status        String         @default("NOT_STARTED")  // NOT_STARTED, IN_PROGRESS, COMPLETED
+  formData      Json?          // Form-specific data
+
+  // E-signature
+  signedAt           DateTime?
+  signatureTypedName String?
+  signatureIpAddress String?
+  signatureUserAgent String?
+
+  // Acknowledgments (for policy forms)
+  acknowledgments    Json?      // Object of checked items
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([applicationId, formType])
+  @@index([applicationId])
+}
+
+// Documents uploaded during application/onboarding
+model ApplicationDocument {
+  id            String         @id @default(cuid())
+  applicationId String
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  formType      String?        // Which form this belongs to
+  documentType  String         // VOIDED_CHECK, INSURANCE_CARD, etc.
+  fileName      String
+  filePath      String
+  fileSize      Int
+  mimeType      String
+  uploadedAt    DateTime       @default(now())
+
+  @@index([applicationId])
 }

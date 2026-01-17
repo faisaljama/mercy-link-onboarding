@@ -43,6 +43,7 @@ import {
   FileSignature,
   MessageSquare,
   FileCheck,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -85,6 +86,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   FileSignature,
   MessageSquare,
   FileCheck,
+  UserPlus,
 };
 
 interface SidebarProps {

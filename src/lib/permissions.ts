@@ -7,6 +7,9 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
   "/dashboard/organization": ["ADMIN"],
   "/dashboard/audit-log": ["ADMIN"],
 
+  // HR Applications
+  "/dashboard/hr": ["ADMIN", "DESIGNATED_COORDINATOR", "HR"],
+
   // People Section
   "/dashboard/clients": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE", "HR"],
   "/dashboard/employees": ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR"],
@@ -164,6 +167,14 @@ export const SIDEBAR_CONFIG: {
       items: [
         { name: "Resource Hub", href: "/dashboard/resources", icon: "BookOpen", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"] },
         { name: "Documents", href: "/dashboard/documents", icon: "FileText", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"] },
+      ],
+    },
+    {
+      name: "HR",
+      icon: "UserPlus",
+      roles: ["ADMIN", "DESIGNATED_COORDINATOR", "HR"],
+      items: [
+        { name: "Applications", href: "/dashboard/hr", icon: "UserPlus", roles: ["ADMIN", "DESIGNATED_COORDINATOR", "HR"] },
       ],
     },
   ],
