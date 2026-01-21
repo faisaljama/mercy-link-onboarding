@@ -105,6 +105,7 @@ export const SIDEBAR_CONFIG: {
       items: [
         { name: "Clients", href: "/dashboard/clients", icon: "Users", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "FINANCE", "HR"] },
         { name: "Employees", href: "/dashboard/employees", icon: "UserCog", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR"] },
+        { name: "HR Applications", href: "/dashboard/hr", icon: "UserPlus", roles: ["ADMIN", "DESIGNATED_COORDINATOR", "HR"] },
         { name: "Discipline", href: "/dashboard/discipline", icon: "Scale", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR"] },
         { name: "Register", href: "/dashboard/register", icon: "ClipboardCheck", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR"] },
       ],
@@ -167,14 +168,6 @@ export const SIDEBAR_CONFIG: {
       items: [
         { name: "Resource Hub", href: "/dashboard/resources", icon: "BookOpen", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"] },
         { name: "Documents", href: "/dashboard/documents", icon: "FileText", roles: ["ADMIN", "DESIGNATED_MANAGER", "DESIGNATED_COORDINATOR", "HR", "OPERATIONS", "FINANCE"] },
-      ],
-    },
-    {
-      name: "HR",
-      icon: "UserPlus",
-      roles: ["ADMIN", "DESIGNATED_COORDINATOR", "HR"],
-      items: [
-        { name: "Applications", href: "/dashboard/hr", icon: "UserPlus", roles: ["ADMIN", "DESIGNATED_COORDINATOR", "HR"] },
       ],
     },
   ],
